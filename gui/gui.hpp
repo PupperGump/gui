@@ -60,7 +60,7 @@ public:
 	unsigned int type = Bounds::TOP_LEFT;
 	float scale_x = 1.f;
 	float scale_y = 1.f;
-	bool set_alignment = 0;
+	bool set_alignment = 0; // prevents the auto-alignment from overriding direct calls to set_position()
 
 	Object();
 	~Object();
@@ -72,7 +72,8 @@ public:
 	virtual void set_position(sf::Vector2f position, bool is_caller = 1);
 	virtual void set_position_impl(sf::Vector2f position) = 0;
 	virtual sf::Vector2f get_position() = 0;
-	//virtual void set_scale(float scale_x, float scale_y = 0.f);
+	virtual void set_scale(float scale_x, float scale_y = 0.f, bool is_caller = 1);
+	virtual void set_scale_impl(float scale_x, float scale_y) = 0;
 	//virtual sf::Vector2f get_scale() = 0;
 
 	// Set the given boundary to the position provided. The boundary is top left by default.
@@ -105,6 +106,8 @@ public:
 	
 	bool bound();
 	void bind(Object& object);
+
+	// This will put the object at the end of the default vector. Use move_vector() if you want to change this.
 	void unbind();
 };
 
@@ -200,6 +203,8 @@ public:
 
 	void set_color_impl(sf::Color color);
 
+	void set_scale_impl(float scale_x, float scale_y);
+
 	void get_hovered();
 
 	bool is_focused();
@@ -249,6 +254,8 @@ public:
 	void set_position_by_bounds(sf::Vector2f position, unsigned int type = Bounds::TOP | Bounds::LEFT, float scale_x = 1.f, float scale_y = 1.f);
 
 	void set_color_impl(sf::Color color);
+
+	void set_scale_impl(float scale_x, float scale_y);
 
 	void set_padding_impl(sf::Vector2f padding);
 

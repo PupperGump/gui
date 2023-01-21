@@ -9,7 +9,7 @@ bool set_state(WindowState& state_input)
 		return 0;
 	state = &state_input;
 
-	// init default resources
+	// init default resources (todo: add more fonts and an enum)
 	sf::Font font;
 	if (!font.loadFromFile("arial.ttf"))
 		std::cout << "Missing default font: arial.ttf\n";
@@ -35,10 +35,9 @@ void hide_all()
 	}
 }
 
+// These use the recursive implementation for bound objects
 void show(Object& object, bool is_caller)
 {
-	//object.hide_object = 0;
-
 	if (is_caller)
 	{
 		state->caller = &object;
@@ -258,59 +257,28 @@ void Object::set_padding(sf::Vector2f padding, bool is_caller)
 }
 
 
-//
-//void Object::set_scale(float scale_x, float scale_y)
-//{
-//	float other = scale_x;
-//	if (scale_y != 0)
-//		other = scale_y;
-//	if (bound_to) {
-//
-//		bound_to->set_scale(scale_x, other);
-//		return;
-//	}
-//	set_scale(scale_x, scale_y);
-//}
+void Object::set_scale(float scale_x, float scale_y, bool is_caller)
+{
+	if (is_caller)
+	{
+		state->caller = this;
+	}
+	else
+	{
+		if (state->caller == this)
+			return;
+	}
+	for (auto& obj : bound_objects)
+	{
+		// If scale_y is 0, use scale_x for both
+		if (scale_y == 0.f)
+			obj->set_scale(scale_x, scale_x, 0);
+		else
+			obj->set_scale(scale_x, scale_y, 0);
+	}
 
-//void Object::bind(Object* other)
-//{
-//	if (other->bound_to == this)
-//	{
-//		// If the other object is already bound to the current object, break the binding
-//		other->bound_to = nullptr;
-//		return;
-//	}
-//
-//	if (bound)
-//		unbind();
-//
-//	// Otherwise, set the current object's bound_to field to the address of the other object
-//	// May remove this, but keeping it in case of recursive problems
-//	bound_to = other;
-//
-//	// If the object you're trying to bind to is NOT bound...
-//	if (!other->bound && other->bind_vector == 0)
-//	{
-//		other->bind_vector = bind_vector = state->next_bind_vector; // Set both objects to next vector
-//		state->next_bind_vector++;
-//		// create the new vector
-//		state->objects.resize(state->objects.size() + 1);
-//	}
-//	else
-//		bind_vector = other->bind_vector;
-//
-//	// remove_vector should not affect the vector if the current object is not in it (putting this here for when I get random errors)
-//	if (other->remove_vector(state->objects[0]))
-//		other->push_vector(state->objects[other->bind_vector]);
-//
-//	if (remove_vector(state->objects[0])) // remove from default vector
-//		push_vector(state->objects[bind_vector]); // Add current object to vector
-//
-//
-//	// When in doubt, change states last
-//	bound = 1;
-//}
-
+	set_scale_impl(scale_x, scale_y);
+}
 
 bool Object::bound()
 {
@@ -356,7 +324,7 @@ void Object::bind(Object& other)
 		move_vector(*current_vector, *last, 1);
 }
 
-// This will put the object at the end of the default vector. Use move_vector() if you want to change this.
+
 void Object::unbind()
 {
 	if (bound_to == NULL)
@@ -601,6 +569,11 @@ void RectField::set_color_impl(sf::Color color)
 	rect.setFillColor(color);
 }
 
+void RectField::set_scale_impl(float scale_x, float scale_y)
+{
+	rect.setScale({ scale_x, scale_y });
+}
+
 void RectField::get_hovered()
 {
 	// It might be annoying to dereference the window every time it's used, but what else can I do
@@ -729,7 +702,11 @@ sf::Vector2f Text::get_position()
 
 void Text::set_string(sf::String string)
 {
+	std::cout << "\ttext.setString()\n";
 	text.setString(string);
+	std::cout << "\tset by bounds:\n";
+	std::cout << "\tbound = " << bound() << "\n";
+	std::cout << "\tbound_objects.size() = " << bound_objects.size() << "\n";
 	set_position_by_bounds(position_reference, type, scale_x, scale_y);
 }
 
@@ -780,6 +757,11 @@ void Text::set_position_by_bounds(sf::Vector2f position, unsigned int type, floa
 void Text::set_color_impl(sf::Color color)
 {
 	text.setFillColor(color);
+}
+
+void Text::set_scale_impl(float scale_x, float scale_y)
+{
+	text.setScale({ scale_x, scale_y });
 }
 
 void Text::set_padding_impl(sf::Vector2f padding)
@@ -970,8 +952,8 @@ void TextInput::add_line()
 	text.push_back(Text());
 	text_index++;
 
-	// Upon line removal, accesses dangling pointer
-	text[text_index].bind(text[text_index - 1]);
+	// Upon line removal, accesses dangling pointer (fixme)
+	//text[text_index].bind(text[text_index - 1]);
 
 	text[text_index].text = text[0].text;
 	//text[text_index].padding = text[0].padding;
@@ -982,14 +964,20 @@ void TextInput::add_line()
 void TextInput::remove_line()
 {
 	if (text_index == 0)
+	{
+		text[text_index].set_string("");
 		return;
-	//delete &text[text_index];
+	}
+	//text[text_index].~Text();
+	//text[text_index].unbind();
 	text.pop_back();
 	text_index--;
 }
 
 void TextInput::process_input_string()
 {
+	//std::cout << "process\n";
+
 	if (!has_user_focus)
 		return;
 
@@ -1009,12 +997,18 @@ void TextInput::process_input_string()
 			if (str.getSize() != 0)
 				str.erase(str.getSize() - 1);
 			kstr.erase(c);
-			c--;
+
+			// Can only do this if not using 'c' anywhere below
+			if (c != 0)
+				c--;
+
+			//std::cout << text_index << "\n";
 		}
 
 		// If text empty, remove it
 		if (str.getSize() == 0)
 		{
+			//std::cout << "\tsize 0, remove\n";
 			remove_line();
 			str = text[text_index].text.getString();
 		}
@@ -1022,9 +1016,11 @@ void TextInput::process_input_string()
 		// If text goes outside rectfield, create a new text below it and cut off the last text at the last space
 		size_t space_pos = 0;
 
+		
 		// Text big, line wrap
 		if (use_line_wrap && text[text_index].get_size().x > get_size().x - text[text_index].padding.x)
 		{
+			//std::cout << "\twrap\n";
 			// Line limit
 			if (limit_lines_to_rect && text[text_index].get_bounds(Bounds::BOTTOM).y > (get_bounds(Bounds::BOTTOM).y - text[text_index].text.getCharacterSize() / 2))
 			{
@@ -1042,16 +1038,22 @@ void TextInput::process_input_string()
 			if (space_pos == 0)
 				continue;
 			next_str = str.substring(space_pos);
+			
 			str.erase(space_pos, str.getSize() - space_pos);
 			text[text_index].set_string(str);
+			//std::cout << "\tadd\n";
 			add_line();
 			text[text_index].set_string(next_str);
 			str = next_str;
 		}
 	}
+
+	std::cout << "set\n";
+	//std::cout << "text_index: " << text_index << "\n";
 	text[text_index].set_string(str + kstr);
 
-	set_alignment(Align::CENTER);
+	//set_alignment(Align::CENTER);
+	//std::cout << "\tfinish\n";
 }
 
 void TextInput::update()

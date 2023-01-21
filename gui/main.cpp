@@ -18,7 +18,7 @@ int main()
 	//butt2.set_color_impl(sf::Color::Red);
 	//butt.padding = { 10.f, 10.f };
 	//butt2.padding = { 10.f, 10.f };
-	TextInput in({ 0.f, 0.f }, { 500.f, 70.f });
+	TextInput in({ 0.f, 0.f }, { 50.f, 70.f });
 	in.set_position_by_bounds(get_window_bounds(Bounds::CENTER), Bounds::CENTER);
 	//in.text.set_string("a");
 	ObjVec vec;
