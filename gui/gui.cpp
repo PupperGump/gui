@@ -20,79 +20,6 @@ bool set_state(WindowState& state_input)
 
 
 
-void show_all()
-{
-	for (auto& obj : state->objects)
-	{
-		obj->hide_object = 0;
-	}
-}
-void hide_all()
-{
-	for (auto& obj : state->objects)
-	{
-		obj->hide_object = 1;
-	}
-}
-
-// These use the recursive implementation for bound objects
-void show(Object& object, bool is_caller)
-{
-	if (is_caller)
-	{
-		state->caller = &object;
-	}
-	else
-	{
-		if (state->caller == &object)
-			return;
-	}
-	for (auto& obj : object.bound_objects)
-	{
-		object.hide_object = 0;
-	}
-
-	object.hide_object = 0;
-}
-
-void hide(Object& object, bool is_caller)
-{
-	//object.hide_object = 1;
-
-	if (is_caller)
-	{
-		state->caller = &object;
-	}
-	else
-	{
-		if (state->caller == &object)
-			return;
-	}
-	for (auto& obj : object.bound_objects)
-	{
-		object.hide_object = 1;
-	}
-
-	object.hide_object = 1;
-}
-
-void show(ObjVec& object_vector)
-{
-	for (auto& obj : object_vector)
-	{
-		obj->hide_object = 0;
-	}
-}
-void hide(ObjVec& object_vector)
-{
-	for (auto& obj : object_vector)
-	{
-		obj->hide_object = 1;
-	}
-}
-
-
-
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // Object
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -108,12 +35,6 @@ Object::~Object()
 {
 	unbind();
 	remove_vector(state->objects);
-}
-
-void Object::update()
-{
-	//if (!hovered && state->mouse_clicked)
-	//	mouse_clicked_with_no_hover = 1;
 }
 
 void Object::push_vector(ObjVec& object_vector)
@@ -170,7 +91,7 @@ void Object::set_vector(ObjVec& object_vector, bool unbind_current)
 	}
 }	
 
-void Object::move_vector(ObjVec& object_vector, int position)
+void Object::move_vector(ObjVec& object_vector, size_t position)
 {
 	int pos = 0;
 	pos = find_vector(object_vector);
@@ -266,7 +187,7 @@ void Object::set_color(sf::Color color, bool is_caller)
 	}
 	for (auto& obj : bound_objects)
 	{
-		obj->set_color(color, 0); // position doesn't matter here since we already have the offset
+		obj->set_color(color, 0);
 	}
 
 	set_color_impl(color);
@@ -290,10 +211,9 @@ void Object::set_padding(sf::Vector2f padding, bool is_caller)
 	}
 	for (auto& obj : bound_objects)
 	{
-		obj->set_padding(padding); // position doesn't matter here since we already have the offset
+		obj->padding = padding;
 	}
-
-	set_padding_impl(padding);
+	padding = padding;
 }
 
 
@@ -371,6 +291,77 @@ void WindowState::set_window(sf::RenderWindow& window)
 	this->window = &window;
 }
 
+void WindowState::show_all()
+{
+	for (auto& obj : state->objects)
+	{
+		obj->hide_object = 0;
+	}
+}
+void WindowState::hide_all()
+{
+	for (auto& obj : state->objects)
+	{
+		obj->hide_object = 1;
+	}
+}
+
+// These use the recursive implementation for bound objects
+void WindowState::show(Object& object, bool is_caller)
+{
+	if (is_caller)
+	{
+		state->caller = &object;
+	}
+	else
+	{
+		if (state->caller == &object)
+			return;
+	}
+	for (auto& obj : object.bound_objects)
+	{
+		object.hide_object = 0;
+	}
+
+	object.hide_object = 0;
+}
+
+void WindowState::hide(Object& object, bool is_caller)
+{
+	//object.hide_object = 1;
+
+	if (is_caller)
+	{
+		state->caller = &object;
+	}
+	else
+	{
+		if (state->caller == &object)
+			return;
+	}
+	for (auto& obj : object.bound_objects)
+	{
+		object.hide_object = 1;
+	}
+
+	object.hide_object = 1;
+}
+
+void WindowState::show(ObjVec& object_vector)
+{
+	for (auto& obj : object_vector)
+	{
+		obj->hide_object = 0;
+	}
+}
+void WindowState::hide(ObjVec& object_vector)
+{
+	for (auto& obj : object_vector)
+	{
+		obj->hide_object = 1;
+	}
+}
+
 // Call inside event loop
 void WindowState::get_events(sf::Event& event)
 {
@@ -406,7 +397,7 @@ void WindowState::get_state()
 	// Moved this here because I'm making update and draw more flexible
 	object_focused = 0;
 
-	mouse_position = state->window->mapPixelToCoords(sf::Mouse::getPosition(*state->window));
+	mouse_screen_position = sf::Mouse::getPosition(*state->window);
 
 	if (mouse_clicked)
 	{
@@ -483,13 +474,14 @@ void WindowState::draw_objects()
 	// I changed it again. Bound objects will be positioned directly after the last object in bound_to->bound_objects. In other words, bound objects will appear above what they're bound to, and those that are bound later will appear above the rest.
 
 	// Can't find a better place for this
-	update(objects);
+	//update(objects);
 	draw_objects(objects);
 	keyboard_input.clear();
 }
 
 void WindowState::draw_objects(ObjVec& object_vector)
 {
+	update(object_vector);
 	for (auto& obj : object_vector)
 	{
 		if (obj->hide_object)
@@ -547,6 +539,16 @@ void RectField::set_position_impl(sf::Vector2f position)
 	rect.setPosition(position);
 }
 
+void RectField::set_color_impl(sf::Color color)
+{
+	rect.setFillColor(color);
+}
+
+void RectField::set_scale_impl(float scale_x, float scale_y)
+{
+	rect.setScale({ scale_x, scale_y });
+}
+
 sf::Vector2f RectField::get_position()
 {
 	return rect.getPosition();
@@ -589,27 +591,22 @@ void RectField::set_position_by_bounds(sf::Vector2f position, unsigned int type,
 	set_position(newpos);
 }
 
-void RectField::set_color_impl(sf::Color color)
-{
-	rect.setFillColor(color);
-}
 
-void RectField::set_scale_impl(float scale_x, float scale_y)
-{
-	rect.setScale({ scale_x, scale_y });
-}
 
 void RectField::get_hovered()
 {
 	sf::Vector2f pos = rect.getPosition();
 	sf::Vector2f size = rect.getSize();
 
+	// Should use current view? WARNING: Cursor still interacts with objects outside the view
+	sf::Vector2f mouse_position = state->window->mapPixelToCoords(state->mouse_screen_position);
+
 	// This will not work if the size is negative
 
-	if (state->mouse_position.x > pos.x &&
-		state->mouse_position.x < pos.x + size.x &&
-		state->mouse_position.y > pos.y &&
-		state->mouse_position.y < pos.y + size.y)
+	if (mouse_position.x > pos.x &&
+		mouse_position.x < pos.x + size.x &&
+		mouse_position.y > pos.y &&
+		mouse_position.y < pos.y + size.y)
 	{
 		hovered = 1;
 	}
@@ -763,11 +760,6 @@ void Text::set_color_impl(sf::Color color)
 void Text::set_scale_impl(float scale_x, float scale_y)
 {
 	text.setScale({ scale_x, scale_y });
-}
-
-void Text::set_padding_impl(sf::Vector2f padding)
-{
-	this->padding = padding;
 }
 
 //void get_hovered();

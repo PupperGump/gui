@@ -50,17 +50,15 @@ class Object
 public:
 	bool hovered = 0, mouse_down_with_no_hover = 0, mouse_clicked_with_no_hover = 0, activated = 0, toggled = 0, has_user_focus = 0;
 	bool ignore_focus = 0; // Only allow the user to interact with one object at a time. Objects will be drawn in the order they're created and updated in reverse, so the topmost object will "catch" the user and set WindowState::object_focused to 1.
-	Object* bound_to = NULL;
-	ObjVec bound_objects; // The objects that are bound to the current object
-	ObjVec* current_vector; // The vector the object is currently in
-	bool hide_object = 0; // Prevents updating/drawing the object when set to true
 
 	// Information used to reposition in case of size changes (such as text alignment)
 	sf::Vector2f position_reference, new_position, padding; // No padding by default
 	unsigned int type = Bounds::TOP_LEFT;
 	float scale_x = 1.f;
 	float scale_y = 1.f;
-	bool set_alignment = 0; // prevents the auto-alignment from overriding direct calls to set_position()
+	
+	// prevents the auto-alignment from overriding direct calls to set_position()
+	bool set_alignment = 0; 
 
 	// Messy implementation requires lost_focus to be 1 to prevent 'stalling' for 1 click after creating the object.
 	bool focus_toggled = 0, lost_focus = 1;
@@ -68,9 +66,32 @@ public:
 	Object();
 	~Object();
 
+	// Moves the object to the given index of the given vector
+	void move_vector(ObjVec& object_vector, size_t position = 0);
+	// Inserts the object at next_to's position and offsets the index by "offset"
+	void move_vector(ObjVec& object_vector, Object& next_to, int offset = 0);
+
+	// Removes the object from its current vector and pushes it to the given vector. I recommend not using this on bound objects.
+	void set_vector(ObjVec& object_vector);
+
+	// If the current object has other objects bound to it, all of those objects up the tree will be moved to the given vector to prevent draw ordering issues. When unbind_current is 0, the object will not be unbound, leading to undefined behavior.
+	void set_vector(ObjVec& object_vector, bool unbind_current);
+	
+	// Returns 1 if object is bound, otherwise 0
+	bool bound();
+	// Make this object be affected by all transformations of the object it's bound to. Many objects can be bound to a single object, but you can only bind something to one other object. This will also group them together in the "parent's" vector (the object at the bottom of the tree) and objects will be drawn in the order they are bound and updated in reverse.
+	void bind(Object& object);	
+	
+	// This will put the object at the end of the default vector. Use move_vector() if you want to change this.
+	void unbind();
+
+	// Basically sfml wrapper functions that affect bound objects
+
 	virtual void set_position(sf::Vector2f position);
 	virtual void set_scale(float scale_x, float scale_y = 0.f);
-	virtual void set_color(sf::Color color1);
+	virtual void set_color(sf::Color color);
+
+	// Sets the x and y distance between an object's boundaries and its given position. Best used with set_position_by_bounds()
 	virtual void set_padding(sf::Vector2f padding);
 
 	virtual sf::Vector2f get_position() = 0;
@@ -81,7 +102,7 @@ public:
 	// Set the given boundary to the position provided. The boundary is top left by default.
 	virtual void set_position_by_bounds(sf::Vector2f position, unsigned int type = Bounds::TOP | Bounds::LEFT, float scale_x = 1.f, float scale_y = 1.f) = 0;
 
-	// Get the position of the object relative to its borders or center. Use scale_x and scale_y to multiply the offset from the center. i.e. get_bounds(Bounds::RIGHT, 0.5f, 0.5f) will get the position halfway between the center and the right edge, since it ignores scale_y by starting at the center. However, adding Bounds::TOP will shift it halfway up.
+	// Get the position of the object relative to its borders or center. Use scale_x and scale_y to multiply the offset from the center. i.e. get_bounds(Bounds::RIGHT, 0.5f, 0.5f) will get the position halfway between the center and the right edge, since it ignores scale_y by starting at the center. However, Bounds::TOP_RIGHT will shift it halfway up and halfway right.
 	virtual sf::Vector2f get_bounds(unsigned int type = Bounds::CENTER, float scale_x = 1.f, float scale_y = 1.f) = 0;
 
 
@@ -90,52 +111,39 @@ public:
 
 
 
-	void move_vector(ObjVec& object_vector, int position = 0);
-	void move_vector(ObjVec& object_vector, Object& next_to, int position = 0);
 
-	//Removes the object from its current vectorand pushes it to the given vector.
-	void set_vector(ObjVec& object_vector);
 
-	// If the current object has other objects bound to it, all of those objects up the tree will be moved to the given vector to prevent draw ordering issues. When unbind_current is 0, the object will not be unbound, leading to undefined behavior.
-	void set_vector(ObjVec& object_vector, bool unbind_current);
-	
-	bool bound();
-	void bind(Object& object);
-
-	// This will put the object at the end of the default vector. Use move_vector() if you want to change this.
-	void unbind();
 
 private:
 	friend class WindowState;
+
+	// What the current object is bound to
+	Object* bound_to = NULL; 
+	// The objects that are bound to the current object
+	ObjVec bound_objects; 
+	// The vector the object is currently in
+	ObjVec* current_vector;
+	// Prevents updating/drawing the object when set to true
+	bool hide_object = 0;
 
 	void push_vector(ObjVec& object_vector);
 	int find_vector(ObjVec& object);
 	bool remove_vector(ObjVec& object_vector);
 
 	virtual void get_hovered() {}
-	virtual void update();
+	virtual void update() {}
 	virtual void draw() {}
 
 	virtual void set_position(sf::Vector2f position, bool is_caller);
 	virtual void set_scale(float scale_x, float scale_y, bool is_caller);
-	virtual void set_color(sf::Color color, bool affect_bound);
-	virtual void set_padding(sf::Vector2f padding, bool affect_bound);
+	virtual void set_color(sf::Color color, bool is_caller);
+	virtual void set_padding(sf::Vector2f padding, bool is_caller);
 
 	virtual void set_position_impl(sf::Vector2f position) = 0;
 	virtual void set_scale_impl(float scale_x, float scale_y) = 0;
 	virtual void set_color_impl(sf::Color color) = 0;
-	virtual void set_padding_impl(sf::Vector2f padding) {}
 	virtual void process_input_string() {}
 };
-
-
-void show_all();
-void hide_all();
-void show(Object& object, bool is_caller = 1);
-void hide(Object& object, bool is_caller = 1);
-void show(ObjVec& object_vector);
-void hide(ObjVec& object_vector);
-
 
 
 // The manager for user events. You must create your own instance of this and supply it to set_state(). You must also supply the given sf::RenderWindow when creating the state.
@@ -145,7 +153,7 @@ public:
 	// Mouse state
 	bool mouse_down = 0, mouse_was_down = 0, mouse_up = 0, mouse_was_up = 0, mouse_clicked = 0;
 
-	sf::Vector2f mouse_position;
+	sf::Vector2i mouse_screen_position;
 
 	// Flag to prevent multiple objects being interacted with at once
 	bool object_focused = 0; 
@@ -165,7 +173,16 @@ public:
 	WindowState();
 	WindowState(sf::RenderWindow& window);
 
+	// Required when using default constructor
 	void set_window(sf::RenderWindow& window);
+
+	void show_all();
+	void hide_all();
+	void show(Object& object, bool is_caller = 1);
+	void hide(Object& object, bool is_caller = 1);
+	void show(ObjVec& object_vector);
+	void hide(ObjVec& object_vector);
+
 
 	// Call inside event loop
 	void get_events(sf::Event& event);
@@ -173,26 +190,26 @@ public:
 	// Call after event loop
 	void get_state();
 
-	// update default vector
-	void update();
 
-	// Only needs to be called if using set_vector()
-	void update(ObjVec& object_vector);
 
 	// Call when drawing, will draw all objects in default vector
 	void draw_objects();
 
 	// Call this after draw_objects() if using set_vector()
-	void draw_objects(ObjVec& object_vector);
+	void draw_objects(ObjVec& object_vector);	
+	
+private:
+	// update default vector
+	void update();
 
-	bool add_font(sf::Font font);
-
+	// Only needs to be called if using set_vector()
+	void update(ObjVec& object_vector);
 };
 
 
 
 // Must be called to use WindowState functions
-bool set_state(WindowState& state_input);
+bool set_state(WindowState& state_instance);
 
 
 
@@ -213,13 +230,8 @@ public:
 	void set_size(sf::Vector2f size);
 
 	sf::Vector2f get_size();
-
-	//void set_position(sf::Vector2f position);
-	void set_position_impl(sf::Vector2f position);
-
+	
 	sf::Vector2f get_position();
-
-	//void set_scale(float scale, float scale_y);
 
 	//sf::Vector2f get_scale();
 
@@ -228,18 +240,18 @@ public:
 	// Set the given boundary to the position provided. The boundary is top left by default.
 	void set_position_by_bounds(sf::Vector2f position, unsigned int type = Bounds::TOP | Bounds::LEFT, float scale_x = 1.f, float scale_y = 1.f);
 
-	void set_color_impl(sf::Color color);
 
-	void set_scale_impl(float scale_x, float scale_y);
 
+protected:
 	void get_hovered();
-
-	bool is_focused();
-
 	void update();
-
 	void draw();
+
+	void set_position_impl(sf::Vector2f position);
+	void set_color_impl(sf::Color color);
+	void set_scale_impl(float scale_x, float scale_y);
 };
+
 
 // A rectfield that activates and deactivates when clicked. Doesn't work when rotated or if the size is negative.
 class Button : public RectField
@@ -248,6 +260,8 @@ public:
 	bool on = 0;
 	Button(sf::Vector2f position = { 0, 0 }, sf::Vector2f size = { 100, 100 }, sf::Color color = sf::Color::Blue);
 
+
+protected:
 	void update();
 };
 
@@ -258,41 +272,29 @@ class Text : public Object
 public:
 	sf::Text text;
 
-
-	//Text();
-
 	Text(sf::Vector2f position = { 0, 0 }, unsigned int font_size = 30u, sf::Color color = sf::Color::White);
 
 	void set_size(unsigned int font_size);
 
 	sf::Vector2f get_size();
 
-	//void set_position(sf::Vector2f position);
-	void set_position_impl(sf::Vector2f position);
-
 	sf::Vector2f get_position();
 
-	// Use this to keep the text aligned when changing the string
+	// Sets the string and realigns the text
 	void set_string(sf::String string);
 
 	sf::Vector2f get_bounds(unsigned int type = Bounds::CENTER, float scale_x = 1.f, float scale_y = 1.f);
 
-	// Set the given boundary to the position provided. The boundary is top left by default.
 	void set_position_by_bounds(sf::Vector2f position, unsigned int type = Bounds::TOP | Bounds::LEFT, float scale_x = 1.f, float scale_y = 1.f);
 
-	void set_color_impl(sf::Color color);
 
-	void set_scale_impl(float scale_x, float scale_y);
-
-	void set_padding_impl(sf::Vector2f padding);
-
-	//void get_hovered();
-
+protected:	
+	friend class TextInput;
 	void update();
-
 	void draw();
-
-private:
+	void set_position_impl(sf::Vector2f position);
+	void set_color_impl(sf::Color color);
+	void set_scale_impl(float scale_x, float scale_y);
 	sf::Vector2f recompute_position(sf::Vector2f position, unsigned int type, float scale_x, float scale_y);
 };
 
@@ -318,7 +320,6 @@ public:
 	sf::Vector2f start;
 
 	// Width and height refers to how many buttons in either direction
-	//Menu();
 	Menu(unsigned int width = 1, unsigned int height = 3);
 
 	void fit_rect();
@@ -330,10 +331,6 @@ public:
 class TextInput : public RectField
 {
 public:
-	std::vector<Text> text;
-	size_t text_index = 0;
-	//unsigned int alignment = Align::LEFT;
-	unsigned int from = 0, to = 0;
 	bool use_line_wrap = 1, limit_lines_to_rect = 0;
 
 
@@ -343,13 +340,16 @@ public:
 
 	void set_alignment(unsigned int alignment);
 
+protected:
 	void add_line();
 
 	void remove_line();
 
 	void process_input_string();
 
+	std::vector<Text> text;
+	size_t text_index = 0;
+	unsigned int from = 0, to = 0;
 	void update();
-
 	void draw();
 };
