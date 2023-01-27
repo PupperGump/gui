@@ -135,7 +135,8 @@ void Object::set_position(sf::Vector2f position, bool is_caller)
 	}
 	for (auto& obj : bound_objects)
 	{
-		obj->set_position(position, 0); // position doesn't matter here since we already have the offset
+		if (obj->affected_by_bound)
+			obj->set_position(position, 0); // position doesn't matter here since we already have the offset
 	}
 
 	set_position_impl(get_position() + state->offset);
@@ -160,10 +161,13 @@ void Object::set_scale(float scale_x, float scale_y, bool is_caller)
 	for (auto& obj : bound_objects)
 	{
 		// If scale_y is 0, use scale_x for both
-		if (scale_y == 0.f)
-			obj->set_scale(scale_x, scale_x, 0);
-		else
-			obj->set_scale(scale_x, scale_y, 0);
+		if (obj->affected_by_bound)
+		{
+			if (scale_y == 0.f)
+				obj->set_scale(scale_x, scale_x, 0);
+			else
+				obj->set_scale(scale_x, scale_y, 0);
+		}
 	}
 
 	set_scale_impl(scale_x, scale_y);
@@ -187,7 +191,8 @@ void Object::set_color(sf::Color color, bool is_caller)
 	}
 	for (auto& obj : bound_objects)
 	{
-		obj->set_color(color, 0);
+		if (obj->affected_by_bound)
+			obj->set_color(color, 0);
 	}
 
 	set_color_impl(color);
@@ -211,7 +216,8 @@ void Object::set_padding(sf::Vector2f padding, bool is_caller)
 	}
 	for (auto& obj : bound_objects)
 	{
-		obj->padding = padding;
+		if (obj->affected_by_bound)
+			obj->padding = padding;
 	}
 	padding = padding;
 }
@@ -254,9 +260,12 @@ void Object::bind(Object& other)
 		set_vector(*bound_to->current_vector);
 	}
 
-	// Move right after "last"
+	// Move right after "last" (pos 0 means left of, 1 means right of)
 	if (last != NULL)
 		move_vector(*current_vector, *last, 1);
+
+	// Share views
+	view_ptr = bound_to->view_ptr;
 }
 
 
@@ -268,6 +277,7 @@ void Object::unbind()
 	remove_vector(bound_to->bound_objects);
 	set_vector(state->objects);
 	bound_to = NULL;
+	view_ptr = NULL;
 }
 
 
@@ -481,12 +491,16 @@ void WindowState::draw_objects()
 
 void WindowState::draw_objects(ObjVec& object_vector)
 {
+	// I think it's better to stick these together since update() and draw() will be called in the same spot anyways, but if that's a problem I can just make the user call update() instead
 	update(object_vector);
 	for (auto& obj : object_vector)
 	{
 		if (obj->hide_object)
 			continue;
+		if (obj->view_ptr != NULL)
+			state->window->setView(*obj->view_ptr);
 		obj->draw();
+		state->window->setView(state->window->getDefaultView());
 	}
 }
 
@@ -648,6 +662,63 @@ void RectField::draw()
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
+// RectView
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+RectView::RectView(sf::Vector2f viewport_position, sf::Vector2f viewport_size, sf::Vector2f rectfield_size, sf::Color color)
+{
+	state->views.push_back(sf::View());
+
+	// We can just take the address of the last thing in the vector, hopefully
+	view_ptr = &state->views[state->views.size() - 1];
+
+	// I'm thinking about whether to set the RectField's position at all since it only renders in the view. However, if in the future it interacts with other objects based on that position, it will overlap with other RectViews. For now I'll just set it to viewport_position and leave that problem for future me
+	set_position(viewport_position);
+	set_size(rectfield_size);
+	//viewport_position -= get_size() / 2.f;
+
+	sf::Vector2f wb = get_window_bounds(Bounds::BOTTOM_RIGHT);
+	//sf::Vector2f wb = { 2560.f, 1540.f };
+	sf::Vector2f wbs = { 1.f / wb.x, 1.f / wb.y};
+	//std::cout << "(" << wbs.x << ", " << wbs.y << ")\n";
+	sf::Vector2f pos = { viewport_position.x * wbs.x, viewport_position.y * wbs.y };
+	sf::Vector2f size = { viewport_size.x * wbs.x, viewport_size.y * wbs.y };
+	//std::cout << "(" << size.x << ", " << size.y << ")\n";
+	view_ptr->setViewport({ pos, size });
+	view_ptr->setCenter(get_bounds(Bounds::TOP_LEFT) + viewport_size / 2.f);
+	view_ptr->setSize(viewport_size);
+
+	//auto s = view_ptr->getSize();
+	//auto p = view_ptr->getCenter();
+	//std::cout << "(" << p.x << ", " << p.y << "), (" << s.x << ", " << s.y << ")\n";
+	//std::cout << get_bounds(Bounds::TOP_LEFT).x << ", " << get_bounds(Bounds::TOP_LEFT).y << "\n";
+}
+
+void RectView::move_view(sf::Vector2f offset)
+{
+	sf::Vector2f new_pos = view_ptr->getCenter() + offset;
+	sf::Vector2f size = view_ptr->getSize() / 2.f;
+
+	if (new_pos.x - size.x < get_bounds(Bounds::LEFT).x)
+		new_pos.x = get_bounds(Bounds::LEFT).x + size.x;
+	if (new_pos.x + size.x > get_bounds(Bounds::RIGHT).x)
+		new_pos.x = get_bounds(Bounds::RIGHT).x - size.x;
+	if (new_pos.y - size.y < get_bounds(Bounds::TOP).y)
+		new_pos.y = get_bounds(Bounds::TOP).y + size.y;
+	if (new_pos.y + size.y > get_bounds(Bounds::BOTTOM).y)
+		new_pos.y = get_bounds(Bounds::BOTTOM).y - size.y;
+	view_ptr->setCenter(new_pos);
+}
+
+// Might remove
+void RectView::draw()
+{
+	// Moved changing these views to the state's draw() function to accomodate objects that don't set their own views
+	RectField::draw();
+}
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
 // Button
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -784,6 +855,31 @@ sf::Vector2f Text::recompute_position(sf::Vector2f position, unsigned int type, 
 	return newpos;
 }
 
+void Text::get_hovered()
+{
+	sf::FloatRect rect = text.getLocalBounds();
+	float offset = text.getCharacterSize() / 2.f;
+	sf::Vector2f pos = rect.getPosition();
+	pos.x -= offset;
+	sf::Vector2f size = rect.getSize();
+	size.x += offset;
+
+	// Should use current view? WARNING: Cursor still interacts with objects outside the view
+	sf::Vector2f mouse_position = state->window->mapPixelToCoords(state->mouse_screen_position);
+
+	// This will not work if the size is negative
+
+	if (mouse_position.x > pos.x &&
+		mouse_position.x < pos.x + size.x &&
+		mouse_position.y > pos.y &&
+		mouse_position.y < pos.y + size.y)
+	{
+		hovered = 1;
+	}
+	else
+		hovered = 0;
+}
+
 void Text::update()
 {
 }
@@ -891,9 +987,20 @@ TextInput::TextInput(sf::Vector2f position, sf::Vector2f size)
 		text.resize(1);
 	//text[0].set_padding({ 50.f, 0.f });
 	text[0].set_string("");
+	text[0].affected_by_bound = 0;
+	text[0].ignore_focus = 1;
 	
 	text[0].bind(*this);
 	set_alignment(Align::LEFT);
+
+	//float whitespaceWidth = text[0].text.getFont()->getGlyph(U' ', text[0].text.getCharacterSize(), (text[0].text.getStyle() == sf::Text::Bold)).advance;
+
+	
+	
+	//float whitespace_width = text[0].text.getGlobalBounds().width;
+	//letter_limit = get_size().x / whitespace_width;
+	//text[0].set_string("");
+	//std::cout << "Size: " << get_size().x << "\nWhitespace: " << whitespace_width << "\nLetter limit: " << letter_limit << "\n";
 }
 
 
@@ -938,6 +1045,7 @@ void TextInput::add_line()
 
 	text[text_index].text = text[0].text;
 	text[text_index].padding = text[0].padding;
+	text[text_index].ignore_focus = 1;
 	text[text_index].set_position_by_bounds(text[text_index - 1].get_bounds(to), from);
 }
 
@@ -952,14 +1060,10 @@ void TextInput::remove_line()
 	text_index--;
 }
 
-void TextInput::process_input_string()
+void TextInput::process_input_string(sf::String& input_string)
 {
 	if (!has_user_focus)
 		return;
-
-	// Get bottom text's string
-	sf::String str = text[text_index].text.getString();
-	sf::String next_str;
 
 	// It's not a very good idea to modify user inputs directly, so:
 	sf::String kstr = state->keyboard_input;
@@ -967,66 +1071,172 @@ void TextInput::process_input_string()
 	// Basically event loop but for a string (when pressing many keys at once, more than one key may enter keyboard_input)
 	for (int c = 0; c < kstr.getSize(); c++)
 	{
+		// Tell display_text() to work
+		string_changed = 1;
 		// If hit backspace, remove last character
 		if (kstr[c] == Ctrl::H) // backspace
 		{
-			if (str.getSize() != 0)
-				str.erase(str.getSize() - 1);
+			if (string.getSize() != 0)
+			{
+				if (cursor_position != 0)
+					cursor_position--;
+				
+			}
 			kstr.erase(c);
-
+			string.erase(cursor_position);
 			// Can only do this if not using 'c' anywhere below
 			if (c != 0)
 				c--;
+			continue;
 		}
 
-		// If text empty, remove it
-		if (str.getSize() == 0)
-		{
-			remove_line();
-			str = text[text_index].text.getString();
-		}
+		// Put letter where thingy is
+		string.insert(cursor_position, kstr[c]);
+		cursor_position++;
+	}
+}
 
-		// If text goes outside rectfield, create a new text below it and cut off the last text at the last space
-		size_t space_pos = 0;
+void TextInput::display_text()
+{
+	if (!has_user_focus)
+		return;
 
+	// Reset string state
+	string_changed = 0;
+
+	// If text is changed at all, "refresh" the lines by removing everything and starting from the beginning.
+	int space_pos = -1;
+	sf::String next_str;
+	sf::String str = string;
+
+	// Remove all lines
+	while (text_index != 0)
+		remove_line();
+
+	// Init
+	text[0].set_string(string);
+
+	// Everything below is for line wrapping
+	if (!use_line_wrap)
+		return;
+
+	// Continue while the text line is bigger than the rectfield. The entire substring after what is wrapped will be passed to the next line.
+	while (text[text_index].get_size().x > get_size().x - text[text_index].padding.x * 2)
+	{
+		// Default for when math doesn't work right
+		int last = str.getSize();
 		
-		// Text big, line wrap
-		if (use_line_wrap && text[text_index].get_size().x > get_size().x - text[text_index].padding.x)
+		// Find the difference between first character of the line and character at i
+		sf::Vector2f start = text[text_index].text.findCharacterPos(0);
+		for (int i = 0; i < str.getSize(); i++)
 		{
-			// Line limit
-			if (limit_lines_to_rect && text[text_index].get_bounds(Bounds::BOTTOM).y > (get_bounds(Bounds::BOTTOM).y - text[text_index].text.getCharacterSize() / 2))
-			{
-				text[text_index].set_string(str);
-				return;
-			}
+			sf::Vector2f pos = text[text_index].text.findCharacterPos(i);
 
-			// Find last word, copy, remove, wrap, work with next line instead
-			for (int i = str.getSize() - 1; i >= 0; i--)
+			// Whichever character is causing the line wrap is gonna be the start for the space loop (last in line)
+			if (abs(pos.x - start.x) > get_size().x - text[text_index].padding.x * 2)
+			{
+				last = i;
+				break;
+			}
+		}
+		
+		//std::cout << "Last at " << last << "\n";
+		for (int i = last; i >= 0; i--)
+		{
+			if (str[i] == ' ')
 			{
 				space_pos = i;
-				if (str[i] == ' ')
-					break;
+				//std::cout << "space_pos at " << space_pos << "\n";
+				break;
 			}
-			if (space_pos == 0)
-				continue;
+		}
+		// If no spaces before
+		if (space_pos == -1)
+		{
+			//std::cout << "No space before\n";
+			for (int i = last; i < str.getSize(); i++)
+			{
+				if (str[i] == ' ')
+				{
+					space_pos = i;
+					//std::cout << "space_pos at " << space_pos << "\n";
+					break;
+				}
+			}
+		}
+		if (space_pos == -1)
+		{
+			//std::cout << "No space_pos\n";
+			return;
+		}
 
-			next_str = str.substring(space_pos + 1);
-			str.erase(space_pos, str.getSize() - space_pos);
-			text[text_index].set_string(str);
+		// Cut current line's string off at where it should be wrapped
+		next_str = str.substring(space_pos + 1, str.getSize() - (space_pos + 1));
+		str.erase(space_pos + 1, next_str.getSize());
+		text[text_index].set_string(str);
 
-			add_line();
-			text[text_index].set_string(next_str);
-			str = next_str;
+		// Stick what's cut off into next line
+		add_line();
+		text[text_index].set_string(next_str);
+
+		// Make this string the next iteration's problem
+		str = next_str;
+		
+		// Reset to default
+		space_pos = -1;
+	}
+	
+}
+
+void TextInput::update_cursor()
+{
+
+	// Before anything else, find out where the cursor position is
+	// Side note, if for whatever reason the bound texts are not updated first I will need to manually update them
+
+	if (state->mouse_clicked)
+	{
+		sf::Vector2f mouse_position = state->window->mapPixelToCoords(state->mouse_screen_position);
+		int cpos = 0;
+		for (int i = 0; i < text.size(); i++)
+		{
+			//text[i].get_hovered();
+			if (!text[i].hovered)
+				break;
+			std::cout << i << "\n";
+			float smallest = 1000000.f;
+
+			for (int j = 0; j < text[i].text.getString().getSize(); j++)
+			{
+				sf::Vector2f pos = text[i].text.findCharacterPos(j);
+				float diff = abs(mouse_position.x - (pos.x + (text[i].text.getCharacterSize() / 2.f)));
+
+				if (diff < smallest)
+				{
+					std::cout << "Diff: " << diff << ", smallest: " << smallest << "\n";
+					smallest = diff;
+				}
+				else
+				{
+					cursor_position = cpos + j;
+					std::cout << i << ", " << j << ", " << cursor_position << "\n";
+
+					break;
+				}
+			}
+			cpos += text[i].text.getString().getSize();
 		}
 	}
-
-	text[text_index].set_string(str + kstr);
 }
+
 
 void TextInput::update()
 {
 	RectField::update();
-	process_input_string();
+	process_input_string(string);
+	if (string_changed)
+		display_text();
+	update_cursor();
 }
 
 void TextInput::draw()

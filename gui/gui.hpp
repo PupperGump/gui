@@ -63,6 +63,13 @@ public:
 	// Messy implementation requires lost_focus to be 1 to prevent 'stalling' for 1 click after creating the object.
 	bool focus_toggled = 0, lost_focus = 1;
 
+	// Determines whether calling a function on an object affects a given object that is bound to it
+	bool affected_by_bound = 1, string_changed = 0;
+
+	// At the cost of more expensive objects, I've added this for flexibility with bound objects
+	sf::View* view_ptr;
+
+
 	Object();
 	~Object();
 
@@ -162,6 +169,7 @@ public:
 	// Vector containing pointers to the objects that will be drawn and updated by default.
 	ObjVec objects; 
 	std::vector<sf::Font> fonts;
+	std::vector<sf::View> views;
 	sf::String keyboard_input;
  
 	// For set_position(), to move bound objects with the caller object
@@ -252,6 +260,17 @@ protected:
 	void set_scale_impl(float scale_x, float scale_y);
 };
 
+class RectView : public RectField
+{
+public:
+
+	RectView(sf::Vector2f viewport_position = { 0.f, 0.f }, sf::Vector2f viewport_size = { 100.f, 100.f }, sf::Vector2f rectfield_size = { 100.f, 100.f }, sf::Color color = sf::Color::Blue);
+
+	void move_view(sf::Vector2f offset);
+protected:
+	void draw();
+};
+
 
 // A rectfield that activates and deactivates when clicked. Doesn't work when rotated or if the size is negative.
 class Button : public RectField
@@ -296,6 +315,7 @@ protected:
 	void set_color_impl(sf::Color color);
 	void set_scale_impl(float scale_x, float scale_y);
 	sf::Vector2f recompute_position(sf::Vector2f position, unsigned int type, float scale_x, float scale_y);
+	void get_hovered();
 };
 
 
@@ -331,7 +351,10 @@ public:
 class TextInput : public RectField
 {
 public:
-	bool use_line_wrap = 1, limit_lines_to_rect = 0;
+	bool use_line_wrap = 1, limit_lines_to_rect = 0, wrap = 0;
+	size_t cursor_position = 0;
+	//int letter_limit = 0;
+	sf::String string;
 
 
 	TextInput(sf::Vector2f position = { 0.f, 0.f }, sf::Vector2f size = { 300.f, 100.f });
@@ -345,7 +368,13 @@ protected:
 
 	void remove_line();
 
-	void process_input_string();
+	void process_input_string(sf::String& input_string);
+
+	//void line_wrap(sf::String& str);
+
+	void display_text();
+
+	void update_cursor();
 
 	std::vector<Text> text;
 	size_t text_index = 0;
