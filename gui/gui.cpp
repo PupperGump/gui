@@ -609,21 +609,26 @@ void RectField::set_position_by_bounds(sf::Vector2f position, unsigned int type,
 
 void RectField::get_hovered()
 {
-	sf::Vector2f pos = rect.getPosition();
-	sf::Vector2f size = rect.getSize();
+	//sf::Vector2f pos = rect.getPosition();
+	//sf::Vector2f size = rect.getSize();
 
-	// Should use current view? WARNING: Cursor still interacts with objects outside the view
+	//// Should use current view? WARNING: Cursor still interacts with objects outside the view
 	sf::Vector2f mouse_position = state->window->mapPixelToCoords(state->mouse_screen_position);
 
-	// This will not work if the size is negative
+	//// This will not work if the size is negative
 
-	if (mouse_position.x > pos.x &&
-		mouse_position.x < pos.x + size.x &&
-		mouse_position.y > pos.y &&
-		mouse_position.y < pos.y + size.y)
-	{
+	//if (mouse_position.x > pos.x &&
+	//	mouse_position.x < pos.x + size.x &&
+	//	mouse_position.y > pos.y &&
+	//	mouse_position.y < pos.y + size.y)
+	//{
+	//	hovered = 1;
+	//}
+	//else
+	//	hovered = 0;
+
+	if (rect.getGlobalBounds().contains(mouse_position))
 		hovered = 1;
-	}
 	else
 		hovered = 0;
 }
@@ -857,25 +862,30 @@ sf::Vector2f Text::recompute_position(sf::Vector2f position, unsigned int type, 
 
 void Text::get_hovered()
 {
-	sf::FloatRect rect = text.getLocalBounds();
-	float offset = text.getCharacterSize() / 2.f;
-	sf::Vector2f pos = rect.getPosition();
-	pos.x -= offset;
-	sf::Vector2f size = rect.getSize();
-	size.x += offset;
+	//sf::FloatRect rect = text.getLocalBounds();
+	//float offset = text.getCharacterSize() / 2.f;
+	//sf::Vector2f pos = rect.getPosition();
+	//pos.x -= offset;
+	//sf::Vector2f size = rect.getSize();
+	//size.x += offset;
 
 	// Should use current view? WARNING: Cursor still interacts with objects outside the view
 	sf::Vector2f mouse_position = state->window->mapPixelToCoords(state->mouse_screen_position);
 
 	// This will not work if the size is negative
 
-	if (mouse_position.x > pos.x &&
-		mouse_position.x < pos.x + size.x &&
-		mouse_position.y > pos.y &&
-		mouse_position.y < pos.y + size.y)
-	{
+	//if (mouse_position.x > pos.x &&
+	//	mouse_position.x < pos.x + size.x &&
+	//	mouse_position.y > pos.y &&
+	//	mouse_position.y < pos.y + size.y)
+	//{
+	//	hovered = 1;
+	//}
+	//else
+	//	hovered = 0;
+
+	if (text.getGlobalBounds().contains(mouse_position))
 		hovered = 1;
-	}
 	else
 		hovered = 0;
 }
@@ -1078,9 +1088,9 @@ void TextInput::process_input_string(sf::String& input_string)
 		{
 			if (string.getSize() != 0)
 			{
-				if (cursor_position != 0)
-					cursor_position--;
-				
+				if (cursor_position == 0)
+					return;
+				cursor_position--;
 			}
 			kstr.erase(c);
 			string.erase(cursor_position);
@@ -1194,39 +1204,61 @@ void TextInput::update_cursor()
 	// Before anything else, find out where the cursor position is
 	// Side note, if for whatever reason the bound texts are not updated first I will need to manually update them
 
-	if (state->mouse_clicked)
+	if (!state->mouse_clicked || !has_user_focus)
+		return;
+
+	sf::Vector2f mouse_position = state->window->mapPixelToCoords(state->mouse_screen_position);
+	int cpos = 0, jay = -1;
+	bool stop = 0;
+	for (int i = 0; i < text.size(); i++)
 	{
-		sf::Vector2f mouse_position = state->window->mapPixelToCoords(state->mouse_screen_position);
-		int cpos = 0;
-		for (int i = 0; i < text.size(); i++)
+		switch (i)
 		{
-			//text[i].get_hovered();
-			if (!text[i].hovered)
-				break;
-			std::cout << i << "\n";
-			float smallest = 1000000.f;
+		case 0:
+			std::cout << "First text:\n";
+			break;
+		case 1:
+			std::cout << "Second text:\n";
+			break;
+		case 2:
+			std::cout << "Third text:\n";
+			break;
+		}
+		text[i].get_hovered();
+		std::cout << i << "\n";
 
-			for (int j = 0; j < text[i].text.getString().getSize(); j++)
+		
+		if (i != 0)
+		{
+			
+			cpos += text[i - 1].text.getString().getSize();
+			//std::cout << "\t\tcpos: " << cpos << "\n";
+			//std::cout << text[i - 1].text.getString().toAnsiString() << "\n";
+		}		
+		
+		if (!text[i].hovered)
+			continue;
+
+		float smallest = INFINITY;
+		float diff = smallest;
+		for (int j = 0; j < text[i].text.getString().getSize(); j++)
+		{
+			std::cout << "\tCharacter " << j << "\n";
+
+			sf::Vector2f pos = text[i].text.findCharacterPos(j);
+			diff = abs(mouse_position.x - pos.x);
+
+			if (diff <= smallest)
 			{
-				sf::Vector2f pos = text[i].text.findCharacterPos(j);
-				float diff = abs(mouse_position.x - (pos.x + (text[i].text.getCharacterSize() / 2.f)));
-
-				if (diff < smallest)
-				{
-					std::cout << "Diff: " << diff << ", smallest: " << smallest << "\n";
-					smallest = diff;
-				}
-				else
-				{
-					cursor_position = cpos + j;
-					std::cout << i << ", " << j << ", " << cursor_position << "\n";
-
-					break;
-				}
+				smallest = diff;
+				jay = j;
 			}
-			cpos += text[i].text.getString().getSize();
 		}
 	}
+	if (jay == -1)
+		cursor_position = string.getSize();
+	else
+		cursor_position = jay + cpos;
 }
 
 
