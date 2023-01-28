@@ -18,7 +18,7 @@ int main()
 	hi.set_color(sf::Color::Black);
 	//hi.limit_lines_to_rect = 0;
 	hi.bind(rv);
-	//hi.set_alignment(Align::RIGHT);
+	hi.set_alignment(Align::CENTER);
 
 	hi.set_position_by_bounds(rv.get_bounds(Bounds::TOP_LEFT), Bounds::TOP_LEFT);
 

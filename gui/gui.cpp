@@ -136,7 +136,10 @@ void Object::set_position(sf::Vector2f position, bool is_caller)
 	for (auto& obj : bound_objects)
 	{
 		if (obj->affected_by_bound)
+		{
+			std::cout << obj->find_vector(state->objects);
 			obj->set_position(position, 0); // position doesn't matter here since we already have the offset
+		}
 	}
 
 	set_position_impl(get_position() + state->offset);
@@ -1054,6 +1057,7 @@ void TextInput::add_line()
 	//text[text_index].bind(text[text_index - 1]);
 
 	text[text_index].text = text[0].text;
+	text[text_index].affected_by_bound = 0;
 	text[text_index].padding = text[0].padding;
 	text[text_index].ignore_focus = 1;
 	text[text_index].set_position_by_bounds(text[text_index - 1].get_bounds(to), from);
@@ -1066,6 +1070,7 @@ void TextInput::remove_line()
 		text[text_index].set_string("");
 		return;
 	}
+	text[text_index].unbind();
 	text.pop_back();
 	text_index--;
 }
@@ -1120,8 +1125,12 @@ void TextInput::display_text()
 	sf::String str = string;
 
 	// Remove all lines
-	while (text_index != 0)
-		remove_line();
+
+	// Better way
+	for (int i = 0; i <= text_index; i++)
+	{
+		text[i].set_string("");
+	}
 
 	// Init
 	text[0].set_string(string);
@@ -1131,19 +1140,21 @@ void TextInput::display_text()
 		return;
 
 	// Continue while the text line is bigger than the rectfield. The entire substring after what is wrapped will be passed to the next line.
-	while (text[text_index].get_size().x > get_size().x - text[text_index].padding.x * 2)
+
+	int index = 0;
+	while (text[index].get_size().x > get_size().x - text[index].padding.x * 2)
 	{
 		// Default for when math doesn't work right
 		int last = str.getSize();
 		
 		// Find the difference between first character of the line and character at i
-		sf::Vector2f start = text[text_index].text.findCharacterPos(0);
+		sf::Vector2f start = text[index].text.findCharacterPos(0);
 		for (int i = 0; i < str.getSize(); i++)
 		{
-			sf::Vector2f pos = text[text_index].text.findCharacterPos(i);
+			sf::Vector2f pos = text[index].text.findCharacterPos(i);
 
 			// Whichever character is causing the line wrap is gonna be the start for the space loop (last in line)
-			if (abs(pos.x - start.x) > get_size().x - text[text_index].padding.x * 2)
+			if (abs(pos.x - start.x) > get_size().x - text[index].padding.x * 2)
 			{
 				last = i;
 				break;
@@ -1183,11 +1194,13 @@ void TextInput::display_text()
 		// Cut current line's string off at where it should be wrapped
 		next_str = str.substring(space_pos + 1, str.getSize() - (space_pos + 1));
 		str.erase(space_pos + 1, next_str.getSize());
-		text[text_index].set_string(str);
+		text[index].set_string(str);
 
 		// Stick what's cut off into next line
-		add_line();
-		text[text_index].set_string(next_str);
+		if (index >= text_index)
+			add_line();
+		index++;
+		text[index].set_string(next_str);
 
 		// Make this string the next iteration's problem
 		str = next_str;
@@ -1212,18 +1225,6 @@ void TextInput::update_cursor()
 	bool stop = 0;
 	for (int i = 0; i < text.size(); i++)
 	{
-		switch (i)
-		{
-		case 0:
-			std::cout << "First text:\n";
-			break;
-		case 1:
-			std::cout << "Second text:\n";
-			break;
-		case 2:
-			std::cout << "Third text:\n";
-			break;
-		}
 		text[i].get_hovered();
 		std::cout << i << "\n";
 
@@ -1232,8 +1233,6 @@ void TextInput::update_cursor()
 		{
 			
 			cpos += text[i - 1].text.getString().getSize();
-			//std::cout << "\t\tcpos: " << cpos << "\n";
-			//std::cout << text[i - 1].text.getString().toAnsiString() << "\n";
 		}		
 		
 		if (!text[i].hovered)
@@ -1248,17 +1247,24 @@ void TextInput::update_cursor()
 			sf::Vector2f pos = text[i].text.findCharacterPos(j);
 			diff = abs(mouse_position.x - pos.x);
 
+			//std::cout << "smallest: " << smallest << "\n";
 			if (diff <= smallest)
 			{
+				//std::cout << "Diff: " << diff << ", smallest: " << smallest << "\n";
 				smallest = diff;
 				jay = j;
 			}
 		}
+		break;
+
 	}
 	if (jay == -1)
 		cursor_position = string.getSize();
 	else
+	{
+		
 		cursor_position = jay + cpos;
+	}
 }
 
 
