@@ -3,15 +3,6 @@
 ##
 ## Get latest from https://github.com/github/gitignore/blob/master/VisualStudio.gitignore
 
-## Project files that got through
-gui.sln
-.gitattributes
-.gitignore
-gui.vcxproj
-gui.vcxproj.filters
-gui.vcxproj.user
-openal32.dll
-
 # User-specific files
 *.rsuser
 *.suo
