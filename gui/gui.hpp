@@ -1,6 +1,7 @@
 #pragma once
 #include <SFML/Graphics.hpp>
 #include <iostream>
+#include <sstream>
 #include <vector>
 #include <string>
 
@@ -58,7 +59,7 @@ public:
 	float scale_y = 1.f;
 	
 	// prevents the auto-alignment from overriding direct calls to set_position()
-	bool set_alignment = 0; 
+	bool set_alignment = 0;
 
 	// Messy implementation requires lost_focus to be 1 to prevent 'stalling' for 1 click after creating the object.
 	bool focus_toggled = 0, lost_focus = 1;
@@ -121,7 +122,7 @@ public:
 
 
 
-private:
+protected:
 	friend class WindowState;
 
 	// What the current object is bound to
@@ -206,7 +207,7 @@ public:
 	// Call this after draw_objects() if using set_vector()
 	void draw_objects(ObjVec& object_vector);	
 	
-private:
+protected:
 	// update default vector
 	void update();
 
@@ -266,6 +267,8 @@ public:
 
 	RectView(sf::Vector2f viewport_position = { 0.f, 0.f }, sf::Vector2f viewport_size = { 100.f, 100.f }, sf::Vector2f rectfield_size = { 100.f, 100.f }, sf::Color color = sf::Color::Blue);
 
+	void set_viewport(sf::Vector2f viewport_position, sf::Vector2f viewport_size);;
+
 	void move_view(sf::Vector2f offset);
 protected:
 	void draw();
@@ -279,9 +282,42 @@ public:
 	bool on = 0;
 	Button(sf::Vector2f position = { 0, 0 }, sf::Vector2f size = { 100, 100 }, sf::Color color = sf::Color::Blue);
 
-
 protected:
 	void update();
+};
+
+
+// A circle field class that handles boundaries and collision
+class CircleField : public Object
+{
+public:
+	sf::CircleShape circle;
+
+	CircleField(sf::Vector2f position = { 0, 0 }, float size = 100, sf::Color color = sf::Color::Blue);
+
+	void set_size(float size);
+
+	float get_size();
+
+	sf::Vector2f get_position();
+
+	//sf::Vector2f get_scale();
+
+	sf::Vector2f get_bounds(unsigned int type = Bounds::CENTER, float scale_x = 1.f, float scale_y = 1.f);
+
+	// Set the given boundary to the position provided. The boundary is top left by default.
+	void set_position_by_bounds(sf::Vector2f position, unsigned int type = Bounds::TOP | Bounds::LEFT, float scale_x = 1.f, float scale_y = 1.f);
+
+
+
+protected:
+	void get_hovered();
+	void update();
+	void draw();
+
+	void set_position_impl(sf::Vector2f position);
+	void set_color_impl(sf::Color color);
+	void set_scale_impl(float scale_x, float scale_y);
 };
 
 
@@ -348,11 +384,13 @@ public:
 };
 
 
-class TextInput : public RectField
+class TextInput : public RectView
 {
 public:
-	bool use_line_wrap = 1, limit_lines_to_rect = 0, wrap = 0;
-	size_t cursor_position = 0;
+	bool use_line_wrap = 1, limit_lines_to_rect = 1;
+
+	size_t cursor_position = 0, line_in_focus = 0;
+	sf::RectangleShape keyboard_cursor;
 	//int letter_limit = 0;
 	sf::String string;
 
@@ -381,4 +419,20 @@ protected:
 	unsigned int from = 0, to = 0;
 	void update();
 	void draw();
+};
+
+
+
+class Slider : public RectField
+{
+public:
+	std::ostringstream ss;
+	Text tmin, tmax, tval;
+	sf::CircleShape knob;
+	float min = 0.f, max = 0.f, val = max / 2.f;
+	int precision = 2;
+	bool fix_the_stupid_bound_bug = 1;
+	Slider(sf::Vector2f position = { 0.f, 0.f }, sf::Vector2f size = { 100.f, 20.f }, float min = 0, float max = 100);
+
+	void update();
 };

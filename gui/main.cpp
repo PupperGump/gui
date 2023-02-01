@@ -1,7 +1,5 @@
 #include <gui.hpp>
 
-
-
 int main()
 {
 	sf::VideoMode mode({ 2560, 1440 }, 32);
@@ -12,17 +10,23 @@ int main()
 
 	WindowState state(win);
 	set_state(state);
-	RectView rv(get_window_bounds(Bounds::TOP_LEFT), get_window_bounds(Bounds::CENTER), get_window_bounds(Bounds::BOTTOM_RIGHT));
+	CircleField c;
+	RectField r;
+	r.set_color(sf::Color::Yellow);
+	c.bind(r);
+	Text t;
+	t.bind(c);
+	t.set_position_by_bounds(c.get_bounds(Bounds::CENTER), Bounds::CENTER);
+	t.set_string("uwuowo");
+	t.affected_by_bound = 0;
+	//r.set_position_by_bounds(get_window_bounds(Bounds::CENTER), Bounds::CENTER);
 
-	TextInput hi;
-	hi.set_color(sf::Color::Black);
-	//hi.limit_lines_to_rect = 0;
-	hi.bind(rv);
-	hi.set_alignment(Align::CENTER);
+	//t.move_vector(state.objects, 2);
+	//t.move_vector(state.objects, c);
 
-	hi.set_position_by_bounds(rv.get_bounds(Bounds::TOP_LEFT), Bounds::TOP_LEFT);
-
-	//view.setViewport(sf::FloatRect( 0, 0, 1, 0.1 ));
+	//Slider s({ 0.f, 0.f }, { 2000.f, 5.f }, -1000000.f, 1000000.f);
+	//s.max = 1;
+	//s.set_position_by_bounds(get_window_bounds(Bounds::CENTER), Bounds::CENTER);
 	// todo: scrollbar, get events better, sliders, color pickers, cursor change, basic file menu, realtime gui change and save gui state, graphs
 
 	// Menus can be made using a defined width and height, then taking in a bunch of strings that can be used as identifiers for the given textbutton. Although menus may require views for scrolling, the view should not extend outside the bounding box so it should be fine for now
@@ -30,6 +34,17 @@ int main()
 	// Now that I've found a way to apply views to RectFields, I can start making scroll bars. First I'll fix the TextInput, then I'll practice by making sliders. Then the scrollbars can take in scroll wheel input with a customizable step size (minimum 1 pixel) and of course both vertical and horizontal scrollbars will be optional for every object using a view.
 
 	// So for the TextInput I'll make a master string that will refresh the text objects every time it's modified. It sounds cpu intensive, but it's better than limiting line wrapping to only typing and backspacing, preventing any arrow key action. 
+
+	// I've basically perfected the text input and now simply need to improve the keyboard cursor. After that, I need to find a way to turn its RectField into a RectView. However, I'm getting errors so not today. Also need to handle copy and paste and cut and tab and delete and arrow keys and home and end and highlighting. After I do that, I will create basic sliders, slap those onto the view and call them scrollbars. Then I can move the view around using those. Another thing to consider is the vertical wiggle room for the bottom line so it doesn't go over the border, but double the charactersize seems to work for now. After that it's cleanup and menus, color pickers, 
+
+	// RectView error is probably to do with the draw function. I'm going to check if object-specific functions like binding will stop working properly with things that inherit from other derived classes.
+
+	// TextInput with view is fixed, but adding too many lines (more than 50) is extremely performance heavy. As a possible optimization, I can hide lines that don't intersect with the viewport or something.
+
+	// Oops, TextInput runs fine in release. Debug slows this program down by about 20-100 times.
+
+	// Slider time. Should take a position, size, min and max. Just adjust x-axis or whatever and normalize to diff
+	// Done there, now need some slider thing and maybe options for whether the rectfield or slider itself will handle hovering. In order to work as a scrollbar, it will need to have a slider thing in the middle and an invisible rectfield for hovering. Will also have to calculate some unit measurement based on view size to see what the step size for scrolling will be.
 
 	while (win.isOpen())
 	{
@@ -46,14 +61,12 @@ int main()
 		}
 		state.get_state();
 		
-		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Up))
-			rv.move_view({ 0.f, -1.f });
-		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Down))
-			rv.move_view({ 0.f, 1.f });
-		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Left))
-			rv.move_view({ -1.f, 0.f });
-		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Right))
-			rv.move_view({ 1.f, 0.f });
+
+		if (c.activated && c.toggled)
+			c.set_color(sf::Color::Green);
+		if (c.activated && !c.toggled)
+			c.set_color(sf::Color::Red);
+
 
 		win.clear({ 0, 0, 0, 255 });
 		state.draw_objects();
