@@ -30,6 +30,7 @@ Object::Object()
 {
 	push_vector(state->objects);
 	current_vector = &state->objects;
+	view_ptr = &state->views[0];
 }
 Object::~Object()
 {
@@ -302,7 +303,7 @@ void Object::unbind()
 	remove_vector(bound_to->bound_objects);
 	set_vector(state->objects);
 	bound_to = NULL;
-	view_ptr = NULL;
+	view_ptr = &state->views[0];
 }
 
 
@@ -319,11 +320,13 @@ WindowState::WindowState()
 WindowState::WindowState(sf::RenderWindow& window)
 {
 	this->window = &window;
+	views.push_back(window.getDefaultView());
 }
 
 void WindowState::set_window(sf::RenderWindow& window)
 {
 	this->window = &window;
+	views.push_back(window.getDefaultView());
 }
 
 void WindowState::show_all()
@@ -402,6 +405,15 @@ void WindowState::get_events(sf::Event& event)
 {
 	switch (event.type)
 	{
+	case sf::Event::MouseWheelScrolled:
+		state->mouse_wheel_scroll = event.mouseWheelScroll;
+		if (sf::Keyboard::isKeyPressed(sf::Keyboard::LShift))
+		{
+			mouse.wheel_x = 1;
+			break;
+		}
+		mouse.wheel_y = 1;
+		break;
 	case sf::Event::MouseButtonPressed:
 		switch (event.mouseButton.button)
 		{
@@ -523,11 +535,10 @@ void WindowState::draw_objects()
 {
 	// I changed it again. Bound objects will be positioned directly after the last object in bound_to->bound_objects. In other words, bound objects will appear above what they're bound to, and those that are bound later will appear above the rest.
 
-	// Can't find a better place for this
-	//update(objects);
 	draw_objects(objects);
 	keyboard_input.clear();
 	key.reset();
+	mouse.reset();
 }
 
 void WindowState::draw_objects(ObjVec& object_vector)
@@ -540,12 +551,19 @@ void WindowState::draw_objects(ObjVec& object_vector)
 	{
 		if (obj->hide_object)
 			continue;
-		if (obj->view_ptr != NULL)
+		if (obj->view_ptr != &views[0])
+		{
+			//std::cout << "\tSpecial view:\n\n";
 			state->window->setView(*obj->view_ptr);
+		}
 		else
-			state->window->setView(state->window->getDefaultView());
+		{
+			//std::cout << "\tDefault view:\n\n";
+			state->window->setView(state->views[0]);
+		}
 		obj->draw();
 	}
+	//std::cout << "\tEnd default view:\n\n";
 	state->window->setView(state->window->getDefaultView());
 }
 
@@ -654,23 +672,9 @@ void RectField::set_position_by_bounds(sf::Vector2f position, unsigned int type,
 
 void RectField::get_hovered()
 {
-	//sf::Vector2f pos = rect.getPosition();
-	//sf::Vector2f size = rect.getSize();
+	// Should use current view? WARNING: Cursor still interacts with objects outside the view
+	sf::Vector2f mouse_position = state->window->mapPixelToCoords(state->mouse_screen_position, *view_ptr);
 
-	//// Should use current view? WARNING: Cursor still interacts with objects outside the view
-	sf::Vector2f mouse_position = state->window->mapPixelToCoords(state->mouse_screen_position);
-
-	//// This will not work if the size is negative
-
-	//if (mouse_position.x > pos.x &&
-	//	mouse_position.x < pos.x + size.x &&
-	//	mouse_position.y > pos.y &&
-	//	mouse_position.y < pos.y + size.y)
-	//{
-	//	hovered = 1;
-	//}
-	//else
-	//	hovered = 0;
 
 	if (rect.getGlobalBounds().contains(mouse_position))
 		hovered = 1;
@@ -707,6 +711,7 @@ void RectField::update()
 
 void RectField::draw()
 {
+	//std::cout << "RectField:\n";
 	state->window->draw(rect);
 }
 
@@ -724,16 +729,12 @@ RectView::RectView(sf::Vector2f viewport_position, sf::Vector2f viewport_size, s
 
 	// I'm thinking about whether to set the RectField's position at all since it only renders in the view. However, if in the future it interacts with other objects based on that position, it will overlap with other RectViews. For now I'll just set it to viewport_position and leave that problem for future me
 	set_position(viewport_position);
-	set_size(rectfield_size);
+	set_size(viewport_size);
 	//viewport_position -= get_size() / 2.f;
 
 	set_viewport(viewport_position, viewport_size);
 
 	view_ptr->setCenter(get_bounds(Bounds::TOP_LEFT) + viewport_size / 2.f);
-	//auto s = view_ptr->getSize();
-	//auto p = view_ptr->getCenter();
-	//std::cout << "(" << p.x << ", " << p.y << "), (" << s.x << ", " << s.y << ")\n";
-	//std::cout << get_bounds(Bounds::TOP_LEFT).x << ", " << get_bounds(Bounds::TOP_LEFT).y << "\n";
 }
 
 void RectView::set_viewport(sf::Vector2f viewport_position, sf::Vector2f viewport_size)
@@ -768,9 +769,63 @@ void RectView::move_view(sf::Vector2f offset)
 	view_ptr->setCenter(new_pos);
 }
 
+
+sf::Vector2f RectView::get_viewport_bounds(unsigned int type, float scale_x, float scale_y)
+{
+	sf::Vector2f step = view_ptr->getViewport().getSize() / 2.f;
+	sf::Vector2f pos = view_ptr->getViewport().getPosition() + step; // Half width right, half height down
+	step.x *= scale_x;
+	step.y *= scale_y;
+
+	if (type & Bounds::LEFT)
+		pos.x -= step.x;
+	if (type & Bounds::RIGHT)
+		pos.x += step.x;
+	if (type & Bounds::TOP)
+		pos.y -= step.y;
+	if (type & Bounds::BOTTOM)
+		pos.y += step.y;
+
+	sf::Vector2f size = state->window->getDefaultView().getSize();
+	pos.x *= size.x;
+	pos.y *= size.y;
+
+	return pos;
+}
+
+sf::Vector2f RectView::get_viewport_size()
+{
+	sf::Vector2f size = state->window->getDefaultView().getSize();
+	sf::Vector2f ret = view_ptr->getViewport().getSize();
+
+	ret.x *= size.x;
+	ret.y *= size.y;
+
+	return ret;
+}
+
+// update needed for scrolling n stuff
+
+void RectView::update()
+{
+	RectField::update();
+	if (!hovered)
+		return;
+	if (state->mouse.wheel_x)
+	{
+		//std::cout << state->mouse_wheel_scroll.delta << "\n";
+		move_view({ -state->mouse_wheel_scroll.delta * horizontal_scroll_speed, 0.f });
+	}
+	if (state->mouse.wheel_y)
+	{
+		//std::cout << state->mouse_wheel_scroll.delta << "\n";
+		move_view({ 0.f, -state->mouse_wheel_scroll.delta * vertical_scroll_speed });
+	}
+}
 // Might remove
 void RectView::draw()
 {
+	//std::cout << "RectView:\n";
 	// Moved changing these views to the state's draw() function to accomodate objects that don't set their own views
 	RectField::draw();
 }
@@ -939,6 +994,7 @@ void CircleField::draw()
 
 Text::Text(sf::Vector2f position, unsigned int font_size, sf::Color color)
 {
+	ignore_focus = 1;
 	text.setFont(state->fonts[0]);
 	text.setPosition(position);
 	text.setCharacterSize(font_size);
@@ -1064,6 +1120,13 @@ void Text::get_hovered()
 
 void Text::update()
 {
+	if (use_ss)
+	{
+		set_string(ss.str());
+		ss.str("");
+		ss.clear();
+		use_ss = 0;
+	}
 }
 
 void Text::draw()
@@ -1246,8 +1309,6 @@ void TextInput::remove_line()
 
 void TextInput::process_input_string(sf::String& input_string)
 {
-	key = state->key;
-	
 	//std::cout << "process input string\n";
 	if (!has_user_focus)
 		return;
@@ -1297,14 +1358,14 @@ void TextInput::process_input_string(sf::String& input_string)
 		cursor_position++;
 	}
 
-	if (key.left)
+	if (state->key.left)
 	{
 		//std::cout << "left\n";
 		if (cursor_position != 0)
 			cursor_position--;
 	}
 
-	if (key.right)
+	if (state->key.right)
 	{
 		//std::cout << "right\n";
 		if (cursor_position != string.getSize())
@@ -1324,7 +1385,7 @@ void TextInput::process_input_string(sf::String& input_string)
 		}
 	}
 
-	if (line > 0 && key.up)
+	if (line > 0 && state->key.up)
 	{
 		float cur = keyboard_cursor.getPosition().x;
 		int up_letter = 0;
@@ -1355,7 +1416,7 @@ void TextInput::process_input_string(sf::String& input_string)
 	//		cursor_position = 0;
 	//}
 
-	if (line < text_index && key.down)
+	if (line < text_index && state->key.down)
 	{
 		//c += text[line].text.getString().getSize();
 		float cur = keyboard_cursor.getPosition().x;
@@ -1497,20 +1558,19 @@ void TextInput::update_cursor()
 	if (!state->mouse_clicked || !has_user_focus)
 		return;
 
-	sf::Vector2f mouse_position = state->window->mapPixelToCoords(state->mouse_screen_position);
+	sf::Vector2f mouse_position = state->window->mapPixelToCoords(state->mouse_screen_position, *view_ptr);
+	sf::Vector2f pos;
 	int cpos = 0, jay = -1;
-	bool stop = 0;
+	//bool stop = 0;
 	for (int i = 0; i < text.size(); i++)
 	{
-		text[i].get_hovered();
-		//std::cout << i << "\n";
-
-		
 		if (i != 0)
 		{
 			cpos += text[i - 1].text.getString().getSize();
-		}		
-		
+		}
+
+		text[i].get_hovered();
+
 		if (!text[i].hovered)
 			continue;
 
@@ -1518,15 +1578,11 @@ void TextInput::update_cursor()
 		float diff = smallest;
 		for (int j = 0; j < text[i].text.getString().getSize(); j++)
 		{
-			//std::cout << "\tCharacter " << j << "\n";
-
-			sf::Vector2f pos = text[i].text.findCharacterPos(j);
+			pos = text[i].text.findCharacterPos(j);
 			diff = abs(mouse_position.x - pos.x);
 
-			//std::cout << "smallest: " << smallest << "\n";
 			if (diff <= smallest)
 			{
-				//std::cout << "Diff: " << diff << ", smallest: " << smallest << "\n";
 				smallest = diff;
 				jay = j;
 			}
@@ -1538,7 +1594,6 @@ void TextInput::update_cursor()
 		cursor_position = string.getSize();
 	else
 	{
-		
 		cursor_position = jay + cpos;
 	}
 }
@@ -1547,7 +1602,7 @@ void TextInput::update_cursor()
 void TextInput::update()
 {
 	//std::cout << "update\n";
-	RectField::update();
+	RectView::update();
 	process_input_string(string);
 	if (string_changed)
 		display_text();
@@ -1556,6 +1611,7 @@ void TextInput::update()
 
 void TextInput::draw()
 {
+	//std::cout << "TextInput:\n";
 	//std::cout << "draw\n";
 	RectField::draw();
 	//RectView::draw();
@@ -1563,6 +1619,7 @@ void TextInput::draw()
 	// Needed since although they are aligned perfectly in the objects vector, there's no easy way to just set the conditions and let it run. Might fix
 	for (auto& t : text)
 	{
+		//std::cout << "TextInput text:\n";
 		t.draw();
 	}
 

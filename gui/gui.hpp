@@ -54,6 +54,17 @@ struct key_code
 	}
 };
 
+struct mouse_button
+{
+	bool wheel_y = 0, wheel_x = 0;
+
+	void reset()
+	{
+		wheel_x = 0;
+		wheel_y = 0;
+	}
+};
+
 class Object;
 typedef std::vector<Object*> ObjVec; // So it doesn't look so ugly
 
@@ -177,6 +188,8 @@ public:
 	sf::Vector2i mouse_screen_position;
 
 	key_code key;
+	mouse_button mouse;
+	sf::Event::MouseWheelScrollEvent mouse_wheel_scroll;
 
 	// Flag to prevent multiple objects being interacted with at once
 	bool object_focused = 0; 
@@ -276,13 +289,20 @@ protected:
 class RectView : public RectField
 {
 public:
+	float vertical_scroll_speed = 15.f;
+	float horizontal_scroll_speed = 15.f;
 
 	RectView(sf::Vector2f viewport_position = { 0.f, 0.f }, sf::Vector2f viewport_size = { 100.f, 100.f }, sf::Vector2f rectfield_size = { 100.f, 100.f }, sf::Color color = sf::Color::Blue);
 
-	void set_viewport(sf::Vector2f viewport_position, sf::Vector2f viewport_size);;
+	void set_viewport(sf::Vector2f viewport_position, sf::Vector2f viewport_size);
+
+	sf::Vector2f get_viewport_bounds(unsigned int type = Bounds::CENTER, float scale_x = 1.f, float scale_y = 1.f);
+
+	sf::Vector2f get_viewport_size();
 
 	void move_view(sf::Vector2f offset);
 protected:
+	void update();
 	void draw();
 };
 
@@ -340,6 +360,8 @@ class Text : public Object
 {
 public:
 	sf::Text text;
+	std::stringstream ss;
+	bool use_ss = 0;
 
 	Text(sf::Vector2f position = { 0, 0 }, unsigned int font_size = 30u, sf::Color color = sf::Color::White);
 
@@ -355,6 +377,15 @@ public:
 	sf::Vector2f get_bounds(unsigned int type = Bounds::CENTER, float scale_x = 1.f, float scale_y = 1.f);
 
 	void set_position_by_bounds(sf::Vector2f position, unsigned int type = Bounds::TOP | Bounds::LEFT, float scale_x = 1.f, float scale_y = 1.f);
+
+	// No clue why I need to return ss but I'm not arguing logic with a computer
+	template <typename T>
+	std::stringstream& operator << (T param)
+	{
+		use_ss = 1;
+		ss << param;
+		return ss;
+	}
 
 
 protected:	
@@ -407,7 +438,8 @@ public:
 	sf::RectangleShape keyboard_cursor;
 	//int letter_limit = 0;
 	sf::String string;
-	key_code key;
+	//key_code key;
+
 
 
 	TextInput(sf::Vector2f position = { 0.f, 0.f }, sf::Vector2f size = { 300.f, 100.f });

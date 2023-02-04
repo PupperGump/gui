@@ -10,8 +10,8 @@ int main()
 
 	WindowState state(win);
 	set_state(state);
-	Text fps;
-	fps.set_position_by_bounds(get_window_bounds(Bounds::TOP_RIGHT), Bounds::TOP_RIGHT);
+	
+
 	sf::Clock fps_clock;
 
 	//r.set_position_by_bounds(get_window_bounds(Bounds::CENTER), Bounds::CENTER);
@@ -19,12 +19,21 @@ int main()
 	//t.move_vector(state.objects, 2);
 	//t.move_vector(state.objects, c);
 	//TextButton tb({ 0.f, 0.f }, { 70.f, 40.f });
-	TextInput in({ 1000.f, 100.f }, { 500.f, 500.f });
+	TextInput in({ 1000.f, 100.f }, { 200.f, 1500.f });
+	//in.set_size({ 1000.f, 1000.f });
+	//in.set_alignment(Align::CENTER);
+	// Input text issue: When scrolling view past original borders, mouse position is wrong
+	Text ms, m;
+	m.set_position_by_bounds(ms.get_bounds(Bounds::BOTTOM_LEFT), Bounds::TOP_LEFT);
+	Text fps;
+	fps.set_position_by_bounds(get_window_bounds(Bounds::TOP_RIGHT), Bounds::TOP_RIGHT);
+
+	
 	//in.ignore_focus = 1;
 	//tb.button.set_position_by_bounds(get_window_bounds(Bounds::TOP_RIGHT), Bounds::TOP_RIGHT);
-	Slider s({ 0.f, 0.f }, { 2000.f, 10.f }, -1000.f, 1000.f);
+	//Slider s({ 0.f, 0.f }, { 2000.f, 10.f }, -1000.f, 1000.f);
 	//s.max = 1;
-	s.set_position_by_bounds(get_window_bounds(Bounds::CENTER), Bounds::CENTER);
+	//s.set_position_by_bounds(get_window_bounds(Bounds::CENTER), Bounds::CENTER);
 	// todo: scrollbar, get events better, sliders, color pickers, cursor change, basic file menu, realtime gui change and save gui state, graphs
 
 	// Menus can be made using a defined width and height, then taking in a bunch of strings that can be used as identifiers for the given textbutton. Although menus may require views for scrolling, the view should not extend outside the bounding box so it should be fine for now
@@ -44,6 +53,7 @@ int main()
 	// Slider time. Should take a position, size, min and max. Just adjust x-axis or whatever and normalize to diff
 	// Done there, now need some slider thing and maybe options for whether the rectfield or slider itself will handle hovering. In order to work as a scrollbar, it will need to have a slider thing in the middle and an invisible rectfield for hovering. Will also have to calculate some unit measurement based on view size to see what the step size for scrolling will be.
 
+
 	unsigned int fps_counter = 0;
 	while (win.isOpen())
 	{
@@ -60,6 +70,10 @@ int main()
 		}
 		state.get_state();
 
+		sf::Vector2i mspos = state.mouse_screen_position;
+		sf::Vector2f mpos = state.window->mapPixelToCoords(state.mouse_screen_position, *in.view_ptr);
+		ms << mspos.x << ", " << mspos.y;
+		m << mpos.x << ", " << mpos.y;
 
 		win.clear({ 0, 0, 0, 255 });
 
@@ -70,7 +84,7 @@ int main()
 
 		if (fps_clock.getElapsedTime().asMilliseconds() >= 100.f)
 		{
-			fps.set_string(std::to_string(fps_counter * 10.f));
+			fps << fps_counter * 10.f;
 			fps_clock.restart();
 			fps_counter = 0;
 		}
