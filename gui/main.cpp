@@ -4,29 +4,27 @@ int main()
 {
 	sf::VideoMode mode({ 2560, 1440 }, 32);
 	sf::RenderWindow win(mode, "title", sf::Style::Default);
-	win.setFramerateLimit(144u);
+	//win.setFramerateLimit(144u);
 
 	sf::Event event;
 
 	WindowState state(win);
 	set_state(state);
-	CircleField c;
-	RectField r;
-	r.set_color(sf::Color::Yellow);
-	c.bind(r);
-	Text t;
-	t.bind(c);
-	t.set_position_by_bounds(c.get_bounds(Bounds::CENTER), Bounds::CENTER);
-	t.set_string("uwuowo");
-	t.affected_by_bound = 0;
+	Text fps;
+	fps.set_position_by_bounds(get_window_bounds(Bounds::TOP_RIGHT), Bounds::TOP_RIGHT);
+	sf::Clock fps_clock;
+
 	//r.set_position_by_bounds(get_window_bounds(Bounds::CENTER), Bounds::CENTER);
 
 	//t.move_vector(state.objects, 2);
 	//t.move_vector(state.objects, c);
-
-	//Slider s({ 0.f, 0.f }, { 2000.f, 5.f }, -1000000.f, 1000000.f);
+	//TextButton tb({ 0.f, 0.f }, { 70.f, 40.f });
+	TextInput in({ 1000.f, 100.f }, { 500.f, 500.f });
+	//in.ignore_focus = 1;
+	//tb.button.set_position_by_bounds(get_window_bounds(Bounds::TOP_RIGHT), Bounds::TOP_RIGHT);
+	Slider s({ 0.f, 0.f }, { 2000.f, 10.f }, -1000.f, 1000.f);
 	//s.max = 1;
-	//s.set_position_by_bounds(get_window_bounds(Bounds::CENTER), Bounds::CENTER);
+	s.set_position_by_bounds(get_window_bounds(Bounds::CENTER), Bounds::CENTER);
 	// todo: scrollbar, get events better, sliders, color pickers, cursor change, basic file menu, realtime gui change and save gui state, graphs
 
 	// Menus can be made using a defined width and height, then taking in a bunch of strings that can be used as identifiers for the given textbutton. Although menus may require views for scrolling, the view should not extend outside the bounding box so it should be fine for now
@@ -46,6 +44,7 @@ int main()
 	// Slider time. Should take a position, size, min and max. Just adjust x-axis or whatever and normalize to diff
 	// Done there, now need some slider thing and maybe options for whether the rectfield or slider itself will handle hovering. In order to work as a scrollbar, it will need to have a slider thing in the middle and an invisible rectfield for hovering. Will also have to calculate some unit measurement based on view size to see what the step size for scrolling will be.
 
+	unsigned int fps_counter = 0;
 	while (win.isOpen())
 	{
 		while (win.pollEvent(event))
@@ -60,18 +59,21 @@ int main()
 			}
 		}
 		state.get_state();
-		
-
-		if (c.activated && c.toggled)
-			c.set_color(sf::Color::Green);
-		if (c.activated && !c.toggled)
-			c.set_color(sf::Color::Red);
 
 
 		win.clear({ 0, 0, 0, 255 });
+
 		state.draw_objects();
 
 		
 		win.display();
+
+		if (fps_clock.getElapsedTime().asMilliseconds() >= 100.f)
+		{
+			fps.set_string(std::to_string(fps_counter * 10.f));
+			fps_clock.restart();
+			fps_counter = 0;
+		}
+		fps_counter++;
 	}
 }

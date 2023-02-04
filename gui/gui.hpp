@@ -41,6 +41,19 @@ namespace Ctrl
 	};
 }; // namespace Ctrl
 
+struct key_code
+{
+	bool up = 0, down = 0, left = 0, right = 0;
+
+	void reset()
+	{
+		up = 0;
+		down = 0;
+		left = 0;
+		right = 0;
+	}
+};
+
 class Object;
 typedef std::vector<Object*> ObjVec; // So it doesn't look so ugly
 
@@ -163,6 +176,8 @@ public:
 
 	sf::Vector2i mouse_screen_position;
 
+	key_code key;
+
 	// Flag to prevent multiple objects being interacted with at once
 	bool object_focused = 0; 
 	sf::RenderWindow* window = NULL;
@@ -204,15 +219,12 @@ public:
 	// Call when drawing, will draw all objects in default vector
 	void draw_objects();
 
-	// Call this after draw_objects() if using set_vector()
+	// Call this if using set_vector()
 	void draw_objects(ObjVec& object_vector);	
-	
-protected:
-	// update default vector
-	void update();
 
-	// Only needs to be called if using set_vector()
+	// Do not use. Temporarily public because I can't hide it from users while still sharing it with everything that inherits from Object.
 	void update(ObjVec& object_vector);
+protected:
 };
 
 
@@ -311,6 +323,8 @@ public:
 
 
 protected:
+	//friend class Slider;
+
 	void get_hovered();
 	void update();
 	void draw();
@@ -393,6 +407,7 @@ public:
 	sf::RectangleShape keyboard_cursor;
 	//int letter_limit = 0;
 	sf::String string;
+	key_code key;
 
 
 	TextInput(sf::Vector2f position = { 0.f, 0.f }, sf::Vector2f size = { 300.f, 100.f });
@@ -427,12 +442,15 @@ class Slider : public RectField
 {
 public:
 	std::ostringstream ss;
+	ObjVec vec;
 	Text tmin, tmax, tval;
-	sf::CircleShape knob;
+	CircleField knob;
 	float min = 0.f, max = 0.f, val = max / 2.f;
 	int precision = 2;
 	bool fix_the_stupid_bound_bug = 1;
 	Slider(sf::Vector2f position = { 0.f, 0.f }, sf::Vector2f size = { 100.f, 20.f }, float min = 0, float max = 100);
 
 	void update();
+
+	void draw();
 };

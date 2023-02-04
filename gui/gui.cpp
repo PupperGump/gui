@@ -236,7 +236,7 @@ void Object::set_padding(sf::Vector2f padding, bool is_caller)
 		if (obj->affected_by_bound)
 			obj->padding = padding;
 	}
-	padding = padding;
+	this->padding = padding;
 }
 
 
@@ -420,6 +420,27 @@ void WindowState::get_events(sf::Event& event)
 			break;
 		}
 		break;
+	case sf::Event::KeyPressed:
+		// Due to the lack of any conversions between key codes and the characters they represent, I need a way to mark that the key was pressed. One way I can do this is to stuff the key codes into a vector or use booleans. However, this means that I must reset or remove them when using them, meaning I can only use a key action for one object. I could also track the presses in state and instead use those to modify a struct in the object itself. The disadvantage is the size of the objects will be larger as the keys I need to check increase. I'd also rather not use vectors to keep the event checking as quick as possible. 
+		switch (event.key.code)
+		{
+		case sf::Keyboard::Delete:
+			keyboard_input += (unsigned int)127;
+			break;
+		case sf::Keyboard::Left:
+			key.left = 1;
+			break;
+		case sf::Keyboard::Up:
+			key.up = 1;
+			break;
+		case sf::Keyboard::Right:
+			key.right = 1;
+			break;
+		case sf::Keyboard::Down:
+			key.down = 1;
+			break;
+		}
+		break;
 	case sf::Event::TextEntered:
 		keyboard_input += event.text.unicode;
 		break;
@@ -448,16 +469,6 @@ void WindowState::get_state()
 		mouse_was_down = 0;
 	}
 }
-
-// Might be useless now
-void WindowState::update()
-{
-	//if (objects.size() == 0)
-	//	return;
-
-	update(objects);
-}
-
 
 void WindowState::update(ObjVec& object_vector)
 {
@@ -516,6 +527,7 @@ void WindowState::draw_objects()
 	//update(objects);
 	draw_objects(objects);
 	keyboard_input.clear();
+	key.reset();
 }
 
 void WindowState::draw_objects(ObjVec& object_vector)
@@ -966,8 +978,11 @@ void Text::set_string(sf::String string)
 
 sf::Vector2f Text::get_bounds(unsigned int type, float scale_x, float scale_y)
 {
-	sf::FloatRect text_rect = text.getGlobalBounds();
-	sf::Vector2f step = text_rect.getSize() / 2.f;
+	sf::FloatRect text_rect = text.getLocalBounds();
+	sf::Vector2f size = text_rect.getSize();
+	size.x += text_rect.left;
+	size.y += text_rect.top;
+	sf::Vector2f step = size / 2.f;
 	//std::cout << text_rect.left << ", " << text_rect.top << "\n";
 	sf::Vector2f pos = text.getPosition() + step;
 
@@ -1231,16 +1246,19 @@ void TextInput::remove_line()
 
 void TextInput::process_input_string(sf::String& input_string)
 {
+	key = state->key;
+	
 	//std::cout << "process input string\n";
 	if (!has_user_focus)
 		return;
-
+	//std::cout << key.up << key.down << key.left << key.right << "\n";
 	// It's not a very good idea to modify user inputs directly, so:
 	sf::String kstr = state->keyboard_input;
 
 	// Basically event loop but for a string (when pressing many keys at once, more than one key may enter keyboard_input)
 	for (int c = 0; c < kstr.getSize(); c++)
 	{
+		//std::cout << kstr[c] << "\n";
 		// Tell display_text() to work
 		string_changed = 1;
 		// If hit backspace, remove last character
@@ -1249,7 +1267,7 @@ void TextInput::process_input_string(sf::String& input_string)
 			if (string.getSize() != 0)
 			{
 				if (cursor_position == 0)
-					return;
+					continue;
 				cursor_position--;
 			}
 			kstr.erase(c);
@@ -1260,10 +1278,114 @@ void TextInput::process_input_string(sf::String& input_string)
 			continue;
 		}
 
+		// If hit delete, remove cursor_position
+		if (kstr[c] == 127)
+		{
+			if (string.getSize() == 0 || cursor_position > string.getSize() - 1)
+				return;
+			kstr.erase(c);
+			string.erase(cursor_position);
+			// Can only do this if not using 'c' anywhere below
+			if (c != 0)
+				c--;
+			continue;
+		}
+
+		
 		// Put letter where thingy is
 		string.insert(cursor_position, kstr[c]);
 		cursor_position++;
 	}
+
+	if (key.left)
+	{
+		//std::cout << "left\n";
+		if (cursor_position != 0)
+			cursor_position--;
+	}
+
+	if (key.right)
+	{
+		//std::cout << "right\n";
+		if (cursor_position != string.getSize())
+			cursor_position++;
+	}
+
+	int c = 0, next = 0, line = 0;
+	for (int i = 0; i < text.size(); i++)
+	{
+		next = text[i].text.getString().getSize();
+		if (c + next < cursor_position)
+			c += next;
+		else
+		{
+			line = i;
+			break;
+		}
+	}
+
+	if (line > 0 && key.up)
+	{
+		float cur = keyboard_cursor.getPosition().x;
+		int up_letter = 0;
+		for (int i = 0; i < text[line - 1].text.getString().getSize(); i++)
+		{
+			float right = text[line - 1].text.findCharacterPos(i).x;
+			if (right >= cur)
+			{
+				if (i == 0)
+				{
+					break;
+				}
+				float left = text[line - 1].text.findCharacterPos(i - 1).x;
+				float left_diff = fabsf(cur - left);
+				float right_diff = fabsf(right - cur);
+				if (left_diff <= right_diff)
+					i--;
+				up_letter = i;
+				break;
+			}
+		}
+		int size = text[line - 1].text.getString().getSize();
+		cursor_position = (c - size) + up_letter;
+	}
+	//else
+	//{
+	//	if (key.up)
+	//		cursor_position = 0;
+	//}
+
+	if (line < text_index && key.down)
+	{
+		//c += text[line].text.getString().getSize();
+		float cur = keyboard_cursor.getPosition().x;
+		int down_letter = 0;
+		for (int i = 0; i < text[line + 1].text.getString().getSize(); i++)
+		{
+			float right = text[line + 1].text.findCharacterPos(i).x;
+			if (right >= cur)
+			{
+				if (i == 0)
+				{
+					break;
+				}
+				float left = text[line + 1].text.findCharacterPos(i - 1).x;
+				float left_diff = fabsf(cur - left);
+				float right_diff = fabsf(right - cur);
+				if (left_diff <= right_diff)
+					i--;
+				down_letter = i;
+				break;
+			}
+		}
+		int size = text[line].text.getString().getSize();
+		cursor_position = (c + size) + down_letter;
+	}
+	//else
+	//{
+	//	if (key.down)
+	//		cursor_position = string.getSize();
+	//}
 }
 
 void TextInput::display_text()
@@ -1477,18 +1599,30 @@ Slider::Slider(sf::Vector2f position, sf::Vector2f size, float min, float max)
 	set_position(position);
 	set_size(size);
 
-	knob.setPointCount(32);
-	knob.setFillColor(sf::Color::Green);
-	knob.setRadius(size.y * 4.f);
+	knob.set_size(get_size().y * 2);
+	knob.bind(*this);
 
-	knob.setPosition(get_bounds(Bounds::CENTER) - sf::Vector2f(knob.getRadius(), knob.getRadius()));
+	knob.set_position_by_bounds(get_bounds(Bounds::CENTER), Bounds::CENTER);
+
+	//knob.ignore_focus = 1;
 
 	this->min = min;
 	this->max = max;
 
 	tmin.bind(*this);
-	tmax.bind(*this);
-	tval.bind(*this);
+	tmax.bind(tmin);
+	tval.bind(tmin);
+
+	tmin.set_padding({ knob.get_size(), knob.get_size() });
+
+	tmin.set_size(get_size().y * 2);
+	tmax.set_size(get_size().y * 2);
+	tval.set_size(get_size().y * 2);
+
+	//ignore_focus = 1;
+	tmin.ignore_focus = 1;
+	tmax.ignore_focus = 1;
+	tval.ignore_focus = 1;
 
 	tmin.set_string(std::to_string(min));
 	tmax.set_string(std::to_string(max));
@@ -1497,12 +1631,18 @@ Slider::Slider(sf::Vector2f position, sf::Vector2f size, float min, float max)
 	tmin.set_position_by_bounds(get_bounds(Bounds::LEFT), Bounds::RIGHT);
 	tmax.set_position_by_bounds(get_bounds(Bounds::RIGHT), Bounds::LEFT);
 	tval.set_position_by_bounds(get_bounds(Bounds::TOP), Bounds::BOTTOM);
+
+	tmin.set_vector(vec);
+	tmax.set_vector(vec);
+	tval.set_vector(vec);
+	knob.set_vector(vec);
 }
 
 
 void Slider::update()
 {
 	RectField::update();
+	state->update(vec);
 
 	if (fix_the_stupid_bound_bug)
 	{
@@ -1515,7 +1655,9 @@ void Slider::update()
 
 	sf::Vector2f mouse_position = state->window->mapPixelToCoords(state->mouse_screen_position);
 
-	if (hovered && state->mouse_down)
+	// A problem I'm encountering is being unable to use objects that are part of the class as a way to determine focus since it first requires the object to be updated, which requires some sort of focus. Basically, I need a way to make this CircleField update with the slider. One thing I can do is create a new vector as part of the class and set everything to it, then update these manually. This will basically mean that when slider is updated, everything else gets updated.
+	// Oops, this still doesn't solve the issue because it's all hinged on whether the Slider can update. 
+	if (state->mouse_down)
 		has_user_focus = 1;
 	if (state->mouse_up)
 		has_user_focus = 0;
@@ -1532,26 +1674,20 @@ void Slider::update()
 	float diff = abs(max - min);
 	val = offset / get_size().x * diff + min;
 
+	knob.set_position_by_bounds(get_bounds(Bounds::LEFT) + sf::Vector2f(offset, 0.f), Bounds::CENTER);
+
 	ss << std::fixed << std::setprecision(precision) << val;
 
 	tval.set_string(ss.str());
 
-	//std::cout << "Position: " << get_position().x << "\n";
-	//std::cout << "Text position: " << tval.get_position().x << "\n";
-	//std::cout << "Text position: " << tval.get_position().x << ", " << tval.get_position().y << "\n";
-	//std::cout << "Slider: " << get_bounds(Bounds::RIGHT).x << "\n";
-
-	// I have no clue why this is breaking unless there's a bunch of trailing whitespace or something, but this honestly doesn't take up any resources even in debug mode. So I'm resetting when it updates.
-	// Position reference is off by 33.5 pixels for center, the problem has nothing to do with the constructor or bindings. It also has nothing to do with the stringstream. It's not a problem with set_position_by_bounds(). 
-	// The problem seems to be with setting the position of the slider after setting position by bounds.
-	// 
-	// Moving the slider causes a -124 offset in the x direction (not dependent on size of text or slider)
-	// 
-	// Setting to bounds TOP_LEFT has no issues. The position itself is the problem. Now I just need to debug for forever to find the issue.
-	// 
 	// Okay, I'm about sick of this. I'll just reset it to where it should be since it's hard-defined anyways. Based on my understanding, the issue has to do with getting the boundaries of the text and is probably related to how I get the size of the text, but nothing seems to work.
 
-	//std::cout << ss.str().size() << "\n";
 	ss.str("");
 	ss.clear();
+}
+
+void Slider::draw()
+{
+	RectField::draw();
+	state->draw_objects(vec);
 }
