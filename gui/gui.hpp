@@ -83,7 +83,7 @@ public:
 	float scale_y = 1.f;
 	
 	// prevents the auto-alignment from overriding direct calls to set_position()
-	bool set_alignment = 0;
+	bool realign = 0;
 
 	// Messy implementation requires lost_focus to be 1 to prevent 'stalling' for 1 click after creating the object.
 	bool focus_toggled = 0, lost_focus = 1;
@@ -311,7 +311,7 @@ protected:
 class Button : public RectField
 {
 public:
-	bool on = 0;
+
 	Button(sf::Vector2f position = { 0, 0 }, sf::Vector2f size = { 100, 100 }, sf::Color color = sf::Color::Blue);
 
 protected:
@@ -396,6 +396,7 @@ protected:
 	void set_color_impl(sf::Color color);
 	void set_scale_impl(float scale_x, float scale_y);
 	sf::Vector2f recompute_position(sf::Vector2f position, unsigned int type, float scale_x, float scale_y);
+	sf::Vector2f uncompute_position(sf::Vector2f position, unsigned int type, float scale_x, float scale_y);
 	void get_hovered();
 };
 
@@ -432,7 +433,9 @@ public:
 class TextInput : public RectView
 {
 public:
-	bool use_line_wrap = 1, limit_lines_to_rect = 1;
+	bool use_line_wrap = 1, box_full = 0;
+	int line_limit = -1;
+	unsigned int alignment = Align::LEFT;
 
 	size_t cursor_position = 0, line_in_focus = 0;
 	sf::RectangleShape keyboard_cursor;

@@ -127,7 +127,7 @@ void Object::move_vector(ObjVec& object_vector, Object& next_to, int position)
 	pos2 = next_to.find_vector(object_vector);
 	object_vector.insert(object_vector.begin() + pos2 + position, this);
 
-	std::cout << "Pos 1: " << pos1 << "\nPos 2: " << pos2 << "\n";
+	//std::cout << "Pos 1: " << pos1 << "\nPos 2: " << pos2 << "\n";
 }
 
 
@@ -282,12 +282,12 @@ void Object::bind(Object& other)
 	// Move right after "last" (pos -1 means left of, 0 means right of)
 	if (last != NULL)
 	{
-		std::cout << "last is not NULL\n";
+		//std::cout << "last is not NULL\n";
 	}
 	else
 	{
 		last = &other;
-		std::cout << "last is NULL\n";
+		//std::cout << "last is NULL\n";
 	}
 	move_vector(*current_vector, *last, 1);
 	// Share views
@@ -569,6 +569,7 @@ void WindowState::draw_objects(ObjVec& object_vector)
 
 sf::Vector2f get_window_bounds(unsigned int type, float scale_x, float scale_y)
 {
+	// I could use sf::VideoMode::getDesktopMode(), however, I'm not sure if it will reference the correct "current" mode, especially if multiple windows are open. Since a new window is supplied for each state for different windows, I'd rather just use the window's information.
 	sf::Vector2f step = state->window->getDefaultView().getSize() / 2.f;
 	sf::Vector2f pos = step; // Half width right, half height down
 	step.x *= scale_x;
@@ -846,10 +847,10 @@ Button::Button(sf::Vector2f position, sf::Vector2f size, sf::Color color)
 void Button::update()
 {
 	RectField::update();
-	if (activated && toggled)
-		on = 1;
-	else if (activated && !toggled)
-		on = 0;
+	//if (activated && toggled)
+	//	on = 1;
+	//else if (activated && !toggled)
+	//	on = 0;
 }
 
 
@@ -1016,9 +1017,13 @@ sf::Vector2f Text::get_size()
 
 void Text::set_position_impl(sf::Vector2f position)
 {
-	if (!set_alignment)
-		position_reference = recompute_position(position, type, scale_x, scale_y);
 	text.setPosition(position);
+
+	// If not called by set_position_by_bounds(), set position_reference to current position?
+	if (!realign)
+	{
+		position_reference = uncompute_position(position, type, scale_x, scale_y);
+	}
 }
 
 sf::Vector2f Text::get_position()
@@ -1066,12 +1071,12 @@ void Text::set_position_by_bounds(sf::Vector2f position, unsigned int type, floa
 	this->scale_x = scale_x;
 	this->scale_y = scale_y;
 
-	set_alignment = 1;
+	realign = 1;
 
 	sf::Vector2f newpos = recompute_position(position, type, scale_x, scale_y);
 	set_position(newpos);
 
-	set_alignment = 0;
+	realign = 0;
 }
 
 void Text::set_color_impl(sf::Color color)
@@ -1106,6 +1111,27 @@ sf::Vector2f Text::recompute_position(sf::Vector2f position, unsigned int type, 
 	return newpos;
 }
 
+sf::Vector2f Text::uncompute_position(sf::Vector2f position, unsigned int type, float scale_x, float scale_y)
+{
+	// This function is undboutedly a work of genius. In one fell swoop, I not only perfectly implemented the correct solution, but did so without even knowing the specifics of what was happening.
+	sf::Vector2f newpos = position;
+	sf::Vector2f bounds = get_bounds(type, scale_x, scale_y);
+
+	if (type & Bounds::LEFT)
+		bounds.x -= padding.x;
+	if (type & Bounds::RIGHT)
+		bounds.x += padding.x;
+	if (type & Bounds::TOP)
+		bounds.y -= padding.y;
+	if (type & Bounds::BOTTOM)
+		bounds.y += padding.y;
+
+	sf::Vector2f offset = (position - bounds);
+	newpos -= offset;
+
+	return newpos;
+}
+
 void Text::get_hovered()
 {
 	// Should use current view? WARNING: Cursor still interacts with objects outside the view
@@ -1120,6 +1146,11 @@ void Text::get_hovered()
 
 void Text::update()
 {
+
+}
+
+void Text::draw()
+{	
 	if (use_ss)
 	{
 		set_string(ss.str());
@@ -1127,10 +1158,6 @@ void Text::update()
 		ss.clear();
 		use_ss = 0;
 	}
-}
-
-void Text::draw()
-{
 	state->window->draw(text);
 }
 
@@ -1254,6 +1281,7 @@ TextInput::TextInput(sf::Vector2f position, sf::Vector2f size)
 void TextInput::set_alignment(unsigned int alignment)
 {
 	//std::cout << "set alignment\n";
+	this->alignment = alignment;
 	if (alignment == Align::LEFT)
 	{
 		from = Bounds::TOP_LEFT;
@@ -1312,6 +1340,8 @@ void TextInput::process_input_string(sf::String& input_string)
 	//std::cout << "process input string\n";
 	if (!has_user_focus)
 		return;
+	if (sf::Keyboard::isKeyPressed(sf::Keyboard::LControl))
+		return;
 	//std::cout << key.up << key.down << key.left << key.right << "\n";
 	// It's not a very good idea to modify user inputs directly, so:
 	sf::String kstr = state->keyboard_input;
@@ -1354,6 +1384,7 @@ void TextInput::process_input_string(sf::String& input_string)
 
 		
 		// Put letter where thingy is
+		//if (!box_full)
 		string.insert(cursor_position, kstr[c]);
 		cursor_position++;
 	}
@@ -1478,9 +1509,24 @@ void TextInput::display_text()
 
 	// Continue while the text line is bigger than the rectfield. The entire substring after what is wrapped will be passed to the next line.
 
-	int index = 0;
-	while (text[index].get_size().x > get_size().x - text[index].padding.x * 2)
+	int index = 0, count = 0;
+	while (count++ != line_limit && text[index].get_size().x > get_size().x - text[index].padding.x * 2.f)
 	{
+		//if (index != 0)
+		//{
+		//	text[index].set_position_by_bounds(text[index - 1].get_bounds(to), from);
+		//}
+		// Experimental and not very good preventing text from going outside box
+		//if (text[index].get_bounds(Bounds::BOTTOM).y > get_bounds(Bounds::BOTTOM).y - text[index].get_size().y)
+		//{
+		//	// Append to last line and stop adding stuff
+		//	text[index].set_string(str);
+		//	box_full = 1;
+		//	break;
+		//}
+		//else
+		//	box_full = 0;
+
 		// Default for when math doesn't work right
 		int last = str.getSize();
 		
@@ -1511,16 +1557,6 @@ void TextInput::display_text()
 		// If no spaces before
 		if (space_pos == -1)
 		{
-			//std::cout << "No space before\n";
-			//for (int i = last; i < str.getSize(); i++)
-			//{
-			//	if (str[i] == ' ')
-			//	{
-			//		space_pos = i;
-			//		//std::cout << "space_pos at " << space_pos << "\n";
-			//		break;
-			//	}
-			//}
 			space_pos = last - 2;
 		}
 		if (space_pos == -1)
@@ -1546,6 +1582,9 @@ void TextInput::display_text()
 		// Reset to default
 		space_pos = -1;
 	}
+
+	// Fixes an issue where, after removing text, the most recently added text will be shown over another line. No performance impact found.
+	set_alignment(alignment);
 	
 }
 
@@ -1703,7 +1742,7 @@ void Slider::update()
 
 	if (fix_the_stupid_bound_bug)
 	{
-		tval.set_position_by_bounds(get_bounds(Bounds::TOP), Bounds::BOTTOM);
+		//tval.set_position_by_bounds(get_bounds(Bounds::TOP), Bounds::BOTTOM);
 		fix_the_stupid_bound_bug = 0;
 	}
 
@@ -1733,14 +1772,17 @@ void Slider::update()
 
 	knob.set_position_by_bounds(get_bounds(Bounds::LEFT) + sf::Vector2f(offset, 0.f), Bounds::CENTER);
 
-	ss << std::fixed << std::setprecision(precision) << val;
+	tval << std::fixed << std::setprecision(precision) << val;
+	// These make tval and tmax fly away??? I need sleep.
+	//tmin << min;
+	//tmax << max;
 
-	tval.set_string(ss.str());
+	//tval.set_string(ss.str());
 
 	// Okay, I'm about sick of this. I'll just reset it to where it should be since it's hard-defined anyways. Based on my understanding, the issue has to do with getting the boundaries of the text and is probably related to how I get the size of the text, but nothing seems to work.
 
-	ss.str("");
-	ss.clear();
+	//ss.str("");
+	//ss.clear();
 }
 
 void Slider::draw()

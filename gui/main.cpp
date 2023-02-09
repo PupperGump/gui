@@ -2,56 +2,41 @@
 
 int main()
 {
-	sf::VideoMode mode({ 2560, 1440 }, 32);
-	sf::RenderWindow win(mode, "title", sf::Style::Default);
+	//sf::VideoMode mode({ 2560, 1440 }, 32);
+	sf::RenderWindow win(sf::VideoMode::getFullscreenModes()[0], "title", sf::Style::Default);
 	//win.setFramerateLimit(144u);
+
+	 //std::vector<sf::VideoMode> modes = sf::VideoMode::getFullscreenModes();
+	 //for (std::size_t i = 0; i < modes.size(); ++i)
+	 //{
+		// sf::VideoMode mode = modes[i];
+		// std::cout << "Mode #" << i << ": "
+		//		   << mode.size.x << "x" << mode.size.y << " - "
+		//		   << mode.bitsPerPixel << " bpp" << std::endl;
+	 //}
 
 	sf::Event event;
 
 	WindowState state(win);
 	set_state(state);
-	
 
 	sf::Clock fps_clock;
 
-	//r.set_position_by_bounds(get_window_bounds(Bounds::CENTER), Bounds::CENTER);
+	//TextInput in({ 1000.f, 100.f }, { 200.f, 500.f });
+	//in.set_size({ 400.f, 500.f });
+	//in.line_limit = 3;
+	Slider s({ 0.f, 0.f }, { 1000.f, 20.f });
+	s.precision = 1;
+	s.set_position_by_bounds(get_window_bounds(Bounds::CENTER), Bounds::CENTER);
+	//s.set_size({ 1000.f, 20.f });
 
-	//t.move_vector(state.objects, 2);
-	//t.move_vector(state.objects, c);
-	//TextButton tb({ 0.f, 0.f }, { 70.f, 40.f });
-	TextInput in({ 1000.f, 100.f }, { 200.f, 1500.f });
-	//in.set_size({ 1000.f, 1000.f });
-	//in.set_alignment(Align::CENTER);
-	// Input text issue: When scrolling view past original borders, mouse position is wrong
-	Text ms, m;
-	m.set_position_by_bounds(ms.get_bounds(Bounds::BOTTOM_LEFT), Bounds::TOP_LEFT);
-	Text fps;
+	Text fps, vec_size;
+	vec_size.set_position_by_bounds(get_window_bounds(Bounds::TOP), Bounds::TOP);
 	fps.set_position_by_bounds(get_window_bounds(Bounds::TOP_RIGHT), Bounds::TOP_RIGHT);
 
-	
-	//in.ignore_focus = 1;
-	//tb.button.set_position_by_bounds(get_window_bounds(Bounds::TOP_RIGHT), Bounds::TOP_RIGHT);
-	//Slider s({ 0.f, 0.f }, { 2000.f, 10.f }, -1000.f, 1000.f);
-	//s.max = 1;
-	//s.set_position_by_bounds(get_window_bounds(Bounds::CENTER), Bounds::CENTER);
-	// todo: scrollbar, get events better, sliders, color pickers, cursor change, basic file menu, realtime gui change and save gui state, graphs
+	// Right aligned text tends to break and overlap. It appears to be taking the text below it and moving it up.
 
-	// Menus can be made using a defined width and height, then taking in a bunch of strings that can be used as identifiers for the given textbutton. Although menus may require views for scrolling, the view should not extend outside the bounding box so it should be fine for now
-	
-	// Now that I've found a way to apply views to RectFields, I can start making scroll bars. First I'll fix the TextInput, then I'll practice by making sliders. Then the scrollbars can take in scroll wheel input with a customizable step size (minimum 1 pixel) and of course both vertical and horizontal scrollbars will be optional for every object using a view.
-
-	// So for the TextInput I'll make a master string that will refresh the text objects every time it's modified. It sounds cpu intensive, but it's better than limiting line wrapping to only typing and backspacing, preventing any arrow key action. 
-
-	// I've basically perfected the text input and now simply need to improve the keyboard cursor. After that, I need to find a way to turn its RectField into a RectView. However, I'm getting errors so not today. Also need to handle copy and paste and cut and tab and delete and arrow keys and home and end and highlighting. After I do that, I will create basic sliders, slap those onto the view and call them scrollbars. Then I can move the view around using those. Another thing to consider is the vertical wiggle room for the bottom line so it doesn't go over the border, but double the charactersize seems to work for now. After that it's cleanup and menus, color pickers, 
-
-	// RectView error is probably to do with the draw function. I'm going to check if object-specific functions like binding will stop working properly with things that inherit from other derived classes.
-
-	// TextInput with view is fixed, but adding too many lines (more than 50) is extremely performance heavy. As a possible optimization, I can hide lines that don't intersect with the viewport or something.
-
-	// Oops, TextInput runs fine in release. Debug slows this program down by about 20-100 times.
-
-	// Slider time. Should take a position, size, min and max. Just adjust x-axis or whatever and normalize to diff
-	// Done there, now need some slider thing and maybe options for whether the rectfield or slider itself will handle hovering. In order to work as a scrollbar, it will need to have a slider thing in the middle and an invisible rectfield for hovering. Will also have to calculate some unit measurement based on view size to see what the step size for scrolling will be.
+	// todo: scrollbar, tree/dropdown elements, get events better, color pickers, cursor change, basic file menu, realtime gui change and save gui state, graphs
 
 
 	unsigned int fps_counter = 0;
@@ -63,6 +48,23 @@ int main()
 
 			switch (event.type)
 			{
+			case sf::Event::KeyPressed:
+				//if (sf::Keyboard::isKeyPressed(sf::Keyboard::LControl))
+				//{
+				//	switch (event.key.code)
+				//	{
+				//	case sf::Keyboard::R:
+				//		in.set_alignment(Align::RIGHT);
+				//		break;
+				//	case sf::Keyboard::L:
+				//		in.set_alignment(Align::LEFT);
+				//		break;
+				//	case sf::Keyboard::C:
+				//		in.set_alignment(Align::CENTER);
+				//		break;
+				//	}
+				//}
+				break;
 			case sf::Event::Closed:
 				win.close();
 				break;
@@ -70,15 +72,18 @@ int main()
 		}
 		state.get_state();
 
-		sf::Vector2i mspos = state.mouse_screen_position;
-		sf::Vector2f mpos = state.window->mapPixelToCoords(state.mouse_screen_position, *in.view_ptr);
-		ms << mspos.x << ", " << mspos.y;
-		m << mpos.x << ", " << mpos.y;
+		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Up))
+			s.set_position(s.get_position() + sf::Vector2f(0.f, -1.f));
+		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Down))
+			s.set_position(s.get_position() + sf::Vector2f(0.f, 1.f));
+		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Left))
+			s.set_position(s.get_position() + sf::Vector2f(-1.f, 0.f));
+		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Right))
+			s.set_position(s.get_position() + sf::Vector2f(1.f, 0.f));
 
 		win.clear({ 0, 0, 0, 255 });
 
 		state.draw_objects();
-
 		
 		win.display();
 
@@ -89,5 +94,7 @@ int main()
 			fps_counter = 0;
 		}
 		fps_counter++;
+
+
 	}
 }
