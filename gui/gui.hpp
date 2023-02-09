@@ -88,6 +88,9 @@ public:
 	// Messy implementation requires lost_focus to be 1 to prevent 'stalling' for 1 click after creating the object.
 	bool focus_toggled = 0, lost_focus = 1;
 
+	// When true, sets the bound object's focus to 1
+	bool catch_focus = 0;
+
 	// Determines whether calling a function on an object affects a given object that is bound to it
 	bool affected_by_bound = 1, string_changed = 0;
 
@@ -119,7 +122,7 @@ public:
 
 	// Basically sfml wrapper functions that affect bound objects
 
-	virtual void set_position(sf::Vector2f position);
+	virtual void set_position(sf::Vector2f position, bool affect_bound = 1);
 	virtual void set_scale(float scale_x, float scale_y = 0.f);
 	virtual void set_color(sf::Color color);
 
@@ -166,7 +169,7 @@ protected:
 	virtual void update() {}
 	virtual void draw() {}
 
-	virtual void set_position(sf::Vector2f position, bool is_caller);
+	virtual void set_position(sf::Vector2f position, bool is_caller, bool affect_bound = 1);
 	virtual void set_scale(float scale_x, float scale_y, bool is_caller);
 	virtual void set_color(sf::Color color, bool is_caller);
 	virtual void set_padding(sf::Vector2f padding, bool is_caller);
@@ -175,6 +178,7 @@ protected:
 	virtual void set_scale_impl(float scale_x, float scale_y) = 0;
 	virtual void set_color_impl(sf::Color color) = 0;
 	virtual void process_input_string() {}
+	virtual bool lose_focus_condition();
 };
 
 
@@ -451,6 +455,8 @@ public:
 
 	void set_alignment(unsigned int alignment);
 
+	bool lose_focus_condition();
+
 protected:
 	void add_line();
 
@@ -482,7 +488,7 @@ public:
 	CircleField knob;
 	float min = 0.f, max = 0.f, val = max / 2.f;
 	int precision = 2;
-	bool fix_the_stupid_bound_bug = 1;
+	//bool fix_the_stupid_bound_bug = 1;
 	Slider(sf::Vector2f position = { 0.f, 0.f }, sf::Vector2f size = { 100.f, 20.f }, float min = 0, float max = 100);
 
 	void update();

@@ -6,15 +6,6 @@ int main()
 	sf::RenderWindow win(sf::VideoMode::getFullscreenModes()[0], "title", sf::Style::Default);
 	//win.setFramerateLimit(144u);
 
-	 //std::vector<sf::VideoMode> modes = sf::VideoMode::getFullscreenModes();
-	 //for (std::size_t i = 0; i < modes.size(); ++i)
-	 //{
-		// sf::VideoMode mode = modes[i];
-		// std::cout << "Mode #" << i << ": "
-		//		   << mode.size.x << "x" << mode.size.y << " - "
-		//		   << mode.bitsPerPixel << " bpp" << std::endl;
-	 //}
-
 	sf::Event event;
 
 	WindowState state(win);
@@ -22,7 +13,7 @@ int main()
 
 	sf::Clock fps_clock;
 
-	//TextInput in({ 1000.f, 100.f }, { 200.f, 500.f });
+	TextInput in({ 1000.f, 100.f }, { 200.f, 500.f });
 	//in.set_size({ 400.f, 500.f });
 	//in.line_limit = 3;
 	Slider s({ 0.f, 0.f }, { 1000.f, 20.f });

@@ -131,13 +131,18 @@ void Object::move_vector(ObjVec& object_vector, Object& next_to, int position)
 }
 
 
-void Object::set_position(sf::Vector2f position)
+void Object::set_position(sf::Vector2f position, bool affect_bound)
 {
-	set_position(position, 1);
+	set_position(position, 1, affect_bound);
 }
 
-void Object::set_position(sf::Vector2f position, bool is_caller)
+void Object::set_position(sf::Vector2f position, bool is_caller, bool affect_bound)
 {
+	if (!affect_bound)
+	{
+		set_position_impl(get_position() + state->offset);
+		return;
+	}
 	if (is_caller)
 	{
 		state->offset = position - get_position();
@@ -153,7 +158,7 @@ void Object::set_position(sf::Vector2f position, bool is_caller)
 		if (obj->affected_by_bound)
 		{
 			//std::cout << obj->find_vector(state->objects);
-			obj->set_position(position, 0); // position doesn't matter here since we already have the offset
+			obj->set_position(position, 0, 1); // position doesn't matter here since we already have the offset
 		}
 	}
 
@@ -238,6 +243,11 @@ void Object::set_padding(sf::Vector2f padding, bool is_caller)
 			obj->padding = padding;
 	}
 	this->padding = padding;
+}
+
+bool Object::lose_focus_condition()
+{
+	return (!hovered && state->mouse_up);
 }
 
 
@@ -497,27 +507,33 @@ void WindowState::update(ObjVec& object_vector)
 			continue;
 
 		// Toggle whether the object should have focus when mouse is clicked
-		if (mouse_clicked)
+		if (object_vector[i]->activated)
+			object_vector[i]->has_user_focus = 1;
+		if (object_vector[i]->lose_focus_condition())
 		{
-			if (object_vector[i]->has_user_focus)
-				object_vector[i]->lost_focus = 1;
 			object_vector[i]->has_user_focus = 0;
-
-			if (object_vector[i]->focus_toggled)
-				object_vector[i]->focus_toggled = 0;
-			if (object_vector[i]->lost_focus || object_vector[i]->activated)
-				object_vector[i]->focus_toggled = 1;
 		}
+
+		// Figure out if the mouse is hovering over the object and whether to set bound focus
 		object_vector[i]->get_hovered();
 
-		// Update the object regardless of what's on top of it
+		if (object_vector[i]->hovered && object_vector[i]->catch_focus)
+		{
+			if (object_vector[i]->bound())
+			{
+				object_vector[i]->bound_to->has_user_focus = 1;
+			}
+		}
+
+
+		// Update the object every frame if you don't care about focus
 		if (object_vector[i]->ignore_focus)
 		{
 			object_vector[i]->update();
 			continue;
 		}
 
-		// If there is no object currently in focus, update. Do not return here because other objects may ignore focus.
+		// If there is no object currently in focus, update. Lock focus if the current object doesn't "pass" it over to another object
 		if (!object_focused)
 		{
 			if (object_vector[i]->hovered || object_vector[i]->has_user_focus)
@@ -525,7 +541,8 @@ void WindowState::update(ObjVec& object_vector)
 				if (object_vector[i]->has_user_focus)
 					object_vector[i]->lost_focus = 0;
 				object_vector[i]->update();
-				object_focused = 1;
+				if (!object_vector[i]->catch_focus)
+					object_focused = 1;
 			}
 		}
 	}
@@ -690,7 +707,6 @@ void RectField::update()
 	if (hovered && state->mouse_clicked && !mouse_down_with_no_hover)
 	{
 		activated = 1;
-		has_user_focus = 1;
 		toggled = !toggled;
 	}
 	else
@@ -963,7 +979,6 @@ void CircleField::update()
 	if (hovered && state->mouse_clicked && !mouse_down_with_no_hover)
 	{
 		activated = 1;
-		has_user_focus = 1;
 		toggled = !toggled;
 	}
 	else
@@ -1304,6 +1319,11 @@ void TextInput::set_alignment(unsigned int alignment)
 	{
 		text[i].set_position_by_bounds(text[i - 1].get_bounds(to), from);
 	}
+}
+
+bool TextInput::lose_focus_condition()
+{
+	return (!hovered && state->mouse_clicked);
 }
 
 void TextInput::add_line()
@@ -1654,7 +1674,7 @@ void TextInput::draw()
 	//std::cout << "draw\n";
 	RectField::draw();
 	//RectView::draw();
-	
+
 	// Needed since although they are aligned perfectly in the objects vector, there's no easy way to just set the conditions and let it run. Might fix
 	for (auto& t : text)
 	{
@@ -1676,7 +1696,7 @@ void TextInput::draw()
 	}
 
 	//std::cout << "c: " << c << "\n";
-	
+
 	keyboard_cursor.setPosition(text[line_in_focus].text.findCharacterPos(cursor_position - c));
 	if (has_user_focus)
 		state->window->draw(keyboard_cursor);
@@ -1697,6 +1717,7 @@ Slider::Slider(sf::Vector2f position, sf::Vector2f size, float min, float max)
 
 	knob.set_size(get_size().y * 2);
 	knob.bind(*this);
+	knob.catch_focus = 1;
 
 	knob.set_position_by_bounds(get_bounds(Bounds::CENTER), Bounds::CENTER);
 
@@ -1706,10 +1727,12 @@ Slider::Slider(sf::Vector2f position, sf::Vector2f size, float min, float max)
 	this->max = max;
 
 	tmin.bind(*this);
-	tmax.bind(tmin);
-	tval.bind(tmin);
+	tmax.bind(*this);
+	tval.bind(*this);
 
 	tmin.set_padding({ knob.get_size(), knob.get_size() });
+	tmax.set_padding({ knob.get_size(), knob.get_size() });
+	tval.set_padding({ knob.get_size(), knob.get_size() });
 
 	tmin.set_size(get_size().y * 2);
 	tmax.set_size(get_size().y * 2);
@@ -1726,12 +1749,14 @@ Slider::Slider(sf::Vector2f position, sf::Vector2f size, float min, float max)
 
 	tmin.set_position_by_bounds(get_bounds(Bounds::LEFT), Bounds::RIGHT);
 	tmax.set_position_by_bounds(get_bounds(Bounds::RIGHT), Bounds::LEFT);
+
+
 	tval.set_position_by_bounds(get_bounds(Bounds::TOP), Bounds::BOTTOM);
 
-	tmin.set_vector(vec);
-	tmax.set_vector(vec);
-	tval.set_vector(vec);
-	knob.set_vector(vec);
+	//tmin.set_vector(vec);
+	//tmax.set_vector(vec);
+	//tval.set_vector(vec);
+	//knob.set_vector(vec);
 }
 
 
@@ -1740,11 +1765,11 @@ void Slider::update()
 	RectField::update();
 	state->update(vec);
 
-	if (fix_the_stupid_bound_bug)
-	{
-		//tval.set_position_by_bounds(get_bounds(Bounds::TOP), Bounds::BOTTOM);
-		fix_the_stupid_bound_bug = 0;
-	}
+	//if (fix_the_stupid_bound_bug)
+	//{
+	//	//tval.set_position_by_bounds(get_bounds(Bounds::TOP), Bounds::BOTTOM);
+	//	fix_the_stupid_bound_bug = 0;
+	//}
 
 	if (!state->mouse_down)
 		return;
@@ -1774,8 +1799,8 @@ void Slider::update()
 
 	tval << std::fixed << std::setprecision(precision) << val;
 	// These make tval and tmax fly away??? I need sleep.
-	//tmin << min;
-	//tmax << max;
+	tmin << min;
+	tmax << max;
 
 	//tval.set_string(ss.str());
 
