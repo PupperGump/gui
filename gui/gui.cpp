@@ -20,6 +20,7 @@ bool set_state(WindowState& state_input)
 
 
 
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // Object
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -165,12 +166,12 @@ void Object::set_position(sf::Vector2f position, bool is_caller, bool affect_bou
 	set_position_impl(get_position() + state->offset);
 }
 
-void Object::set_scale(float scale_x, float scale_y)
+void Object::set_scale(float scale_x, float scale_y, bool affect_bound)
 {
-	set_scale(scale_x, scale_y, 1);
+	set_scale(scale_x, scale_y, 1, affect_bound);
 }
 
-void Object::set_scale(float scale_x, float scale_y, bool is_caller)
+void Object::set_scale(float scale_x, float scale_y, bool is_caller, bool affect_bound)
 {
 	if (is_caller)
 	{
@@ -187,22 +188,28 @@ void Object::set_scale(float scale_x, float scale_y, bool is_caller)
 		if (obj->affected_by_bound)
 		{
 			if (scale_y == 0.f)
-				obj->set_scale(scale_x, scale_x, 0);
+				obj->set_scale(scale_x, scale_x, 0, 1);
 			else
-				obj->set_scale(scale_x, scale_y, 0);
+				obj->set_scale(scale_x, scale_y, 0, 1);
 		}
 	}
 
 	set_scale_impl(scale_x, scale_y);
 }
 
-void Object::set_color(sf::Color color)
+void Object::set_color(sf::Color color, bool affect_bound)
 {
-	set_color(color, 1);
+	set_color(color, 1, affect_bound);
 }
 
-void Object::set_color(sf::Color color, bool is_caller)
+void Object::set_color(sf::Color color, bool is_caller, bool affect_bound)
 {
+	if (!affect_bound)
+	{
+		set_color_impl(color);
+		return;
+	}
+
 	if (is_caller)
 	{
 		state->caller = this;
@@ -215,7 +222,7 @@ void Object::set_color(sf::Color color, bool is_caller)
 	for (auto& obj : bound_objects)
 	{
 		if (obj->affected_by_bound)
-			obj->set_color(color, 0);
+			obj->set_color(color, 0, 1);
 	}
 
 	set_color_impl(color);
@@ -1721,8 +1728,6 @@ Slider::Slider(sf::Vector2f position, sf::Vector2f size, float min, float max)
 
 	knob.set_position_by_bounds(get_bounds(Bounds::CENTER), Bounds::CENTER);
 
-	//knob.ignore_focus = 1;
-
 	this->min = min;
 	this->max = max;
 
@@ -1738,25 +1743,17 @@ Slider::Slider(sf::Vector2f position, sf::Vector2f size, float min, float max)
 	tmax.set_size(get_size().y * 2);
 	tval.set_size(get_size().y * 2);
 
-	//ignore_focus = 1;
-	tmin.ignore_focus = 1;
-	tmax.ignore_focus = 1;
-	tval.ignore_focus = 1;
-
-	tmin.set_string(std::to_string(min));
-	tmax.set_string(std::to_string(max));
-	tval.set_string(std::to_string(val));
-
 	tmin.set_position_by_bounds(get_bounds(Bounds::LEFT), Bounds::RIGHT);
 	tmax.set_position_by_bounds(get_bounds(Bounds::RIGHT), Bounds::LEFT);
 
 
 	tval.set_position_by_bounds(get_bounds(Bounds::TOP), Bounds::BOTTOM);
 
-	//tmin.set_vector(vec);
-	//tmax.set_vector(vec);
-	//tval.set_vector(vec);
-	//knob.set_vector(vec);
+	tmin << min;
+	tmax << max;
+	tval << val;
+
+	::set_vector(vec, tmin, tmax, tval, knob);
 }
 
 
@@ -1798,16 +1795,6 @@ void Slider::update()
 	knob.set_position_by_bounds(get_bounds(Bounds::LEFT) + sf::Vector2f(offset, 0.f), Bounds::CENTER);
 
 	tval << std::fixed << std::setprecision(precision) << val;
-	// These make tval and tmax fly away??? I need sleep.
-	tmin << min;
-	tmax << max;
-
-	//tval.set_string(ss.str());
-
-	// Okay, I'm about sick of this. I'll just reset it to where it should be since it's hard-defined anyways. Based on my understanding, the issue has to do with getting the boundaries of the text and is probably related to how I get the size of the text, but nothing seems to work.
-
-	//ss.str("");
-	//ss.clear();
 }
 
 void Slider::draw()

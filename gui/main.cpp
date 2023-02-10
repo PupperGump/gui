@@ -19,9 +19,12 @@ int main()
 	Slider s({ 0.f, 0.f }, { 1000.f, 20.f });
 	s.precision = 1;
 	s.set_position_by_bounds(get_window_bounds(Bounds::CENTER), Bounds::CENTER);
+	s.set_color(sf::Color::Green, 0);
+	s.knob.set_color(sf::Color::Yellow);
 	//s.set_size({ 1000.f, 20.f });
 
 	Text fps, vec_size;
+	ObjVec test;
 	vec_size.set_position_by_bounds(get_window_bounds(Bounds::TOP), Bounds::TOP);
 	fps.set_position_by_bounds(get_window_bounds(Bounds::TOP_RIGHT), Bounds::TOP_RIGHT);
 
@@ -29,7 +32,12 @@ int main()
 
 	// todo: scrollbar, tree/dropdown elements, get events better, color pickers, cursor change, basic file menu, realtime gui change and save gui state, graphs
 
-
+	// One probably annoying issue is that for each ObjVec, the items inside will be updated and drawn with their specific call. This can lead to unexpected situations such as something that is being drawn first also being updated first, catching focus in the wrong order.
+	// Solution 1: Create a queue for updating and use draw_objects() only for drawing
+	// Solution 2: With each creating of an ObjVec, we also know how many draw calls there will be.
+	set_vector(test, s, fps);
+	//state.hide(test);
+	//state.show(test);
 	unsigned int fps_counter = 0;
 	while (win.isOpen())
 	{
@@ -64,17 +72,18 @@ int main()
 		state.get_state();
 
 		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Up))
-			s.set_position(s.get_position() + sf::Vector2f(0.f, -1.f));
+			s.set_position(s.get_position() + sf::Vector2f(0.f, -0.1f));
 		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Down))
-			s.set_position(s.get_position() + sf::Vector2f(0.f, 1.f));
+			s.set_position(s.get_position() + sf::Vector2f(0.f, 0.1f));
 		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Left))
-			s.set_position(s.get_position() + sf::Vector2f(-1.f, 0.f));
+			s.set_position(s.get_position() + sf::Vector2f(-0.1f, 0.f));
 		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Right))
-			s.set_position(s.get_position() + sf::Vector2f(1.f, 0.f));
+			s.set_position(s.get_position() + sf::Vector2f(0.1f, 0.f));
 
 		win.clear({ 0, 0, 0, 255 });
-
+		state.draw_objects(test);
 		state.draw_objects();
+		
 		
 		win.display();
 

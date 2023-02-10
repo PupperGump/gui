@@ -69,7 +69,13 @@ class Object;
 typedef std::vector<Object*> ObjVec; // So it doesn't look so ugly
 
 
-// Base class for gui objects, must be declared after setting up the WindowState.
+template<class... Obj>
+void set_vector(ObjVec& object_vector, Obj&... obj)
+{
+	(obj.set_vector(object_vector), ...);
+}
+
+// Base class for gui objects, can't be used before setting up the WindowState.
 class Object
 {
 public:
@@ -123,8 +129,8 @@ public:
 	// Basically sfml wrapper functions that affect bound objects
 
 	virtual void set_position(sf::Vector2f position, bool affect_bound = 1);
-	virtual void set_scale(float scale_x, float scale_y = 0.f);
-	virtual void set_color(sf::Color color);
+	virtual void set_scale(float scale_x, float scale_y = 0.f, bool affect_bound = 1);
+	virtual void set_color(sf::Color color, bool affect_bound = 1);
 
 	// Sets the x and y distance between an object's boundaries and its given position. Best used with set_position_by_bounds()
 	virtual void set_padding(sf::Vector2f padding);
@@ -169,9 +175,9 @@ protected:
 	virtual void update() {}
 	virtual void draw() {}
 
-	virtual void set_position(sf::Vector2f position, bool is_caller, bool affect_bound = 1);
-	virtual void set_scale(float scale_x, float scale_y, bool is_caller);
-	virtual void set_color(sf::Color color, bool is_caller);
+	virtual void set_position(sf::Vector2f position, bool is_caller, bool affect_bound);
+	virtual void set_scale(float scale_x, float scale_y, bool is_caller, bool affect_bound);
+	virtual void set_color(sf::Color color, bool is_caller, bool affect_bound);
 	virtual void set_padding(sf::Vector2f padding, bool is_caller);
 
 	virtual void set_position_impl(sf::Vector2f position) = 0;
