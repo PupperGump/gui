@@ -252,6 +252,11 @@ void Object::set_padding(sf::Vector2f padding, bool is_caller)
 	this->padding = padding;
 }
 
+bool Object::gain_focus_condition()
+{
+	return (hovered && state->mouse_clicked);
+}
+
 bool Object::lose_focus_condition()
 {
 	return (!hovered && state->mouse_up);
@@ -479,7 +484,13 @@ void WindowState::get_events(sf::Event& event)
 // Call after event loop
 void WindowState::get_state()
 {
+	// Reset everything
+	keyboard_input.clear();
+	key.reset();
+	mouse.reset();
+
 	object_focused = 0;
+	found_default = 0;
 
 	mouse_screen_position = sf::Mouse::getPosition(*state->window);
 
@@ -501,29 +512,26 @@ void WindowState::get_state()
 
 void WindowState::update(ObjVec& object_vector)
 {
+	
 	if (object_vector.size() == 0)
 		return;
 
 	// Loop backwards through the object vector to "depth-check" object_vector if object.ignore_focus is 0
 	for (int i = object_vector.size() - 1; i >= 0; i--)
 	{
-		// Don't draw objects that are hidden or nonexistent
+		std::cout << object_vector[i]->name << "\n";
+		// Don't update objects that are hidden or nonexistent
 		if (object_vector[i] == NULL)
 			continue;
 		if (object_vector[i]->hide_object)
 			continue;
 
-		// Toggle whether the object should have focus when mouse is clicked
-		if (object_vector[i]->activated)
-			object_vector[i]->has_user_focus = 1;
-		if (object_vector[i]->lose_focus_condition())
-		{
-			object_vector[i]->has_user_focus = 0;
-		}
+		//object_vector[i]->locked_focus = 0;		
 
 		// Figure out if the mouse is hovering over the object and whether to set bound focus
 		object_vector[i]->get_hovered();
 
+		// Catch and pass focus, used for things like the knob on the slider
 		if (object_vector[i]->hovered && object_vector[i]->catch_focus)
 		{
 			if (object_vector[i]->bound())
@@ -531,7 +539,12 @@ void WindowState::update(ObjVec& object_vector)
 				object_vector[i]->bound_to->has_user_focus = 1;
 			}
 		}
-
+		
+		// Check user focus
+		if (object_vector[i]->gain_focus_condition())
+			object_vector[i]->has_user_focus = 1;
+		if (object_vector[i]->lose_focus_condition())
+			object_vector[i]->has_user_focus = 0;
 
 		// Update the object every frame if you don't care about focus
 		if (object_vector[i]->ignore_focus)
@@ -545,11 +558,12 @@ void WindowState::update(ObjVec& object_vector)
 		{
 			if (object_vector[i]->hovered || object_vector[i]->has_user_focus)
 			{
-				if (object_vector[i]->has_user_focus)
-					object_vector[i]->lost_focus = 0;
 				object_vector[i]->update();
 				if (!object_vector[i]->catch_focus)
+				{
 					object_focused = 1;
+					object_vector[i]->locked_focus = 1;
+				}
 			}
 		}
 	}
@@ -559,17 +573,62 @@ void WindowState::draw_objects()
 {
 	// I changed it again. Bound objects will be positioned directly after the last object in bound_to->bound_objects. In other words, bound objects will appear above what they're bound to, and those that are bound later will appear above the rest.
 
-	draw_objects(objects);
-	keyboard_input.clear();
-	key.reset();
-	mouse.reset();
+	draw_objects_impl(objects);
 }
 
-void WindowState::draw_objects(ObjVec& object_vector)
+void WindowState::draw_objects_impl(std::vector<ObjVec*> vec)
 {
-	// I think it's better to stick these together since update() and draw() will be called in the same spot anyways, but if that's a problem I can just make the user call update() instead
-	update(object_vector);
+	//std::cout << "template\n";
+	for (int i = 0; i < vec.size(); i++)
+	{
+		if (typeid(ObjVec) != typeid(*vec[i]))
+		{
+			std::cout << "ERROR: draw_objects(): item " << i << " not of type ObjVec\n";
+			vec.erase(vec.begin() + i);
+			i--;
+			continue;
+		}
+		if (vec[i] == &state->objects)
+			found_default = 1;
+	}
 
+	for (int i = 0; i < vec.size(); i++)
+	{
+
+	}
+	for (int i = vec.size() - 1; i >= 0; i--)
+	{
+		for (auto& obj : *vec[i])
+		{
+			for (auto& v : obj->obj_vecs)
+			{
+				update(*v);
+			}
+		}
+		update(*vec[i]);
+	}
+	if (!found_default)
+	{
+		update(state->objects);
+		draw_objects_impl(state->objects);
+	}
+	for (int i = 0; i < vec.size(); i++)
+	{
+
+		draw_objects_impl(*vec[i]);		
+		
+		for (auto& obj : *vec[i])
+		{
+			for (auto& v : obj->obj_vecs)
+			{
+				draw_objects_impl(*v);
+			}
+		}
+	}
+}
+
+void WindowState::draw_objects_impl(ObjVec& object_vector)
+{
 	// Setting the view is slightly expensive (73 floats are created I think, at least 37), so maybe a comparison would be better since most of these will probably have the default view. todo: profile both
 	for (auto& obj : object_vector)
 	{
@@ -594,6 +653,7 @@ void WindowState::draw_objects(ObjVec& object_vector)
 sf::Vector2f get_window_bounds(unsigned int type, float scale_x, float scale_y)
 {
 	// I could use sf::VideoMode::getDesktopMode(), however, I'm not sure if it will reference the correct "current" mode, especially if multiple windows are open. Since a new window is supplied for each state for different windows, I'd rather just use the window's information.
+	// After testing, I find that although the view stretches and shrinks weirdly the boundaries remain consistent.
 	sf::Vector2f step = state->window->getDefaultView().getSize() / 2.f;
 	sf::Vector2f pos = step; // Half width right, half height down
 	step.x *= scale_x;
@@ -619,6 +679,7 @@ sf::Vector2f get_window_bounds(unsigned int type, float scale_x, float scale_y)
 
 RectField::RectField(sf::Vector2f position, sf::Vector2f size, sf::Color color)
 {
+	name = "RectField";
 	rect.setPosition(position);
 	rect.setSize(size);
 	rect.setFillColor(color);
@@ -711,6 +772,7 @@ void RectField::get_hovered()
 // Checks mouse collision, click and activation events
 void RectField::update()
 {
+	//std::cout << "updating ";
 	if (hovered && state->mouse_clicked && !mouse_down_with_no_hover)
 	{
 		activated = 1;
@@ -861,6 +923,7 @@ void RectView::draw()
 
 Button::Button(sf::Vector2f position, sf::Vector2f size, sf::Color color)
 {
+	name = "Button";
 	rect.setPosition(position);
 	rect.setSize(size);
 	rect.setFillColor(color);
@@ -885,6 +948,7 @@ void Button::update()
 
 CircleField::CircleField(sf::Vector2f position, float size, sf::Color color)
 {
+	name = "CircleField";
 	circle.setPosition(position);
 	circle.setRadius(size);
 	circle.setFillColor(color);
@@ -1017,6 +1081,8 @@ void CircleField::draw()
 
 Text::Text(sf::Vector2f position, unsigned int font_size, sf::Color color)
 {
+	name = "Text";
+
 	ignore_focus = 1;
 	text.setFont(state->fonts[0]);
 	text.setPosition(position);
@@ -1276,7 +1342,8 @@ void Menu::set_padding(sf::Vector2f padding)
 TextInput::TextInput(sf::Vector2f position, sf::Vector2f size)
 {
 	//std::cout << "construct\n";
-	
+	name = "TextInput";
+
 	set_position(position);
 	set_size(size);
 	set_viewport(position, size);
@@ -1719,12 +1786,15 @@ void TextInput::draw()
 
 Slider::Slider(sf::Vector2f position, sf::Vector2f size, float min, float max)
 {
+	name = "Slider";
+
 	set_position(position);
 	set_size(size);
 
 	knob.set_size(get_size().y * 2);
 	knob.bind(*this);
 	knob.catch_focus = 1;
+	//knob.ignore_focus = 1;
 
 	knob.set_position_by_bounds(get_bounds(Bounds::CENTER), Bounds::CENTER);
 
@@ -1754,19 +1824,15 @@ Slider::Slider(sf::Vector2f position, sf::Vector2f size, float min, float max)
 	tval << val;
 
 	::set_vector(vec, tmin, tmax, tval, knob);
+	obj_vecs.push_back(&vec);
 }
 
 
 void Slider::update()
 {
+	// Can reverse the order of these as a potential fix
 	RectField::update();
-	state->update(vec);
-
-	//if (fix_the_stupid_bound_bug)
-	//{
-	//	//tval.set_position_by_bounds(get_bounds(Bounds::TOP), Bounds::BOTTOM);
-	//	fix_the_stupid_bound_bug = 0;
-	//}
+	//state->update(vec);
 
 	if (!state->mouse_down)
 		return;
@@ -1775,6 +1841,7 @@ void Slider::update()
 
 	// A problem I'm encountering is being unable to use objects that are part of the class as a way to determine focus since it first requires the object to be updated, which requires some sort of focus. Basically, I need a way to make this CircleField update with the slider. One thing I can do is create a new vector as part of the class and set everything to it, then update these manually. This will basically mean that when slider is updated, everything else gets updated.
 	// Oops, this still doesn't solve the issue because it's all hinged on whether the Slider can update. 
+	// catch_focus fixes this issue but it might cause other problems with updating overlayed objects
 	if (state->mouse_down)
 		has_user_focus = 1;
 	if (state->mouse_up)
@@ -1799,6 +1866,7 @@ void Slider::update()
 
 void Slider::draw()
 {
+	//state->update(vec);
 	RectField::draw();
-	state->draw_objects(vec);
+	state->draw_objects_impl(vec);
 }

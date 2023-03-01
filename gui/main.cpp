@@ -2,7 +2,7 @@
 
 int main()
 {
-	//sf::VideoMode mode({ 2560, 1440 }, 32);
+	//sf::VideoMode mode({ 100, 100 }, 32);
 	sf::RenderWindow win(sf::VideoMode::getFullscreenModes()[0], "title", sf::Style::Default);
 	//win.setFramerateLimit(144u);
 
@@ -23,22 +23,25 @@ int main()
 	s.knob.set_color(sf::Color::Yellow);
 	//s.set_size({ 1000.f, 20.f });
 
-	Text fps, vec_size;
+	Text fps, t;
 	ObjVec test;
-	vec_size.set_position_by_bounds(get_window_bounds(Bounds::TOP), Bounds::TOP);
+	t.set_position_by_bounds(get_window_bounds(Bounds::TOP), Bounds::TOP);
 	fps.set_position_by_bounds(get_window_bounds(Bounds::TOP_RIGHT), Bounds::TOP_RIGHT);
 
-	// Right aligned text tends to break and overlap. It appears to be taking the text below it and moving it up.
+	// todo: scrollbar, tree/dropdown elements, get events better, color pickers, cursor change, basic file menu, realtime gui change and save gui state, graphs, allow multiple windows and states
 
-	// todo: scrollbar, tree/dropdown elements, get events better, color pickers, cursor change, basic file menu, realtime gui change and save gui state, graphs
+	// Now I'm gonna change TextInput. Which means changing sf::Text. I will not use external libraries, but may copy code if they give me what I need. I need:
+	// 1. Letters that can each have separate properties such as font, fill color, outline color, and character size
+	// 2. The ability to provide the number of and dimensions of all "lines"
+	// 3. The ability to accept different escape sequences than just \n and \t. Formatting is not necessary since the stringstream handles that.
+	// Since I'm about to go insane, I will congratulate myself on my current achievements. This is pretty well built and organized, and it's very usable in its current state. It's at the point where I no longer have to care about the system and can simply add what I need to it. The cpp file currently has 1872 lines of code and every bit of it was thought long and hard about. I will definitely be better than ImGui which only gives you the bare minimum jack-of-all-trades crap.
 
-	// One probably annoying issue is that for each ObjVec, the items inside will be updated and drawn with their specific call. This can lead to unexpected situations such as something that is being drawn first also being updated first, catching focus in the wrong order.
-	// Solution 1: Create a queue for updating and use draw_objects() only for drawing
-	// Solution 2: With each creating of an ObjVec, we also know how many draw calls there will be.
+	// I broke TextInput somehow, but I was gonna change it anyways
 	set_vector(test, s, fps);
 	//state.hide(test);
 	//state.show(test);
 	unsigned int fps_counter = 0;
+
 	while (win.isOpen())
 	{
 		while (win.pollEvent(event))
@@ -81,8 +84,14 @@ int main()
 			s.set_position(s.get_position() + sf::Vector2f(0.1f, 0.f));
 
 		win.clear({ 0, 0, 0, 255 });
+
+		t << in.hovered;
+
+		//state.update(s.vec);
 		state.draw_objects(test);
-		state.draw_objects();
+
+		// Supplying state.objects allows updating but no textinput (must fix)
+		// Otherwise it draws but doesn't update
 		
 		
 		win.display();
@@ -94,7 +103,7 @@ int main()
 			fps_counter = 0;
 		}
 		fps_counter++;
-
+		std::cout << "//\n\n";
 
 	}
 }

@@ -5,6 +5,8 @@
 #include <vector>
 #include <string>
 
+#define watch(x) std::cout << (#x) << " is " << (x) << "\n"
+
 namespace Bounds
 {
 	enum
@@ -68,6 +70,26 @@ struct mouse_button
 class Object;
 typedef std::vector<Object*> ObjVec; // So it doesn't look so ugly
 
+template<typename T>
+void printTypeName()
+{
+	if constexpr (std::is_same_v<T, ObjVec>)
+	{
+		std::cout << "ObjVec";
+	}
+	else
+	{
+		std::cout << typeid(T).name();
+	}
+	std::cout << " ";
+}
+
+template<typename... Args>
+void printTypeNames(Args&... args)
+{
+	(printTypeName<Args>(), ...);
+	std::cout << "\n";
+}
 
 template<class... Obj>
 void set_vector(ObjVec& object_vector, Obj&... obj)
@@ -79,8 +101,9 @@ void set_vector(ObjVec& object_vector, Obj&... obj)
 class Object
 {
 public:
+	std::string name = "Object";
 	bool hovered = 0, mouse_down_with_no_hover = 0, mouse_clicked_with_no_hover = 0, activated = 0, toggled = 0, has_user_focus = 0;
-	bool ignore_focus = 0; // Only allow the user to interact with one object at a time. Objects will be drawn in the order they're created and updated in reverse, so the topmost object will "catch" the user and set WindowState::object_focused to 1.
+	bool ignore_focus = 0, locked_focus = 0; // Only allow the user to interact with one object at a time. Objects will be drawn in the order they're created and updated in reverse, so the topmost object will "catch" the user and set WindowState::object_focused to 1.
 
 	// Information used to reposition in case of size changes (such as text alignment)
 	sf::Vector2f position_reference, new_position, padding; // No padding by default
@@ -91,9 +114,6 @@ public:
 	// prevents the auto-alignment from overriding direct calls to set_position()
 	bool realign = 0;
 
-	// Messy implementation requires lost_focus to be 1 to prevent 'stalling' for 1 click after creating the object.
-	bool focus_toggled = 0, lost_focus = 1;
-
 	// When true, sets the bound object's focus to 1
 	bool catch_focus = 0;
 
@@ -102,6 +122,10 @@ public:
 
 	// At the cost of more expensive objects, I've added this for flexibility with bound objects
 	sf::View* view_ptr;
+
+	// Some objects may need ObjVecs paired with them for convenience, without the inconvenience of binding.
+	std::vector<ObjVec*> obj_vecs;
+	bool vec_drawn = 0;
 
 
 	Object();
@@ -142,6 +166,12 @@ public:
 
 	// Set the given boundary to the position provided. The boundary is top left by default.
 	virtual void set_position_by_bounds(sf::Vector2f position, unsigned int type = Bounds::TOP | Bounds::LEFT, float scale_x = 1.f, float scale_y = 1.f) = 0;
+
+	// Perhaps you only care about the borders and typing is hard
+	virtual void stick(Object& object, unsigned int curr = Bounds::TOP | Bounds::LEFT, unsigned int other = Bounds::TOP | Bounds::LEFT)
+	{
+		set_position_by_bounds(object.get_bounds(other), curr);
+	}
 
 	// Get the position of the object relative to its borders or center. Use scale_x and scale_y to multiply the offset from the center. i.e. get_bounds(Bounds::RIGHT, 0.5f, 0.5f) will get the position halfway between the center and the right edge, since it ignores scale_y by starting at the center. However, Bounds::TOP_RIGHT will shift it halfway up and halfway right.
 	virtual sf::Vector2f get_bounds(unsigned int type = Bounds::CENTER, float scale_x = 1.f, float scale_y = 1.f) = 0;
@@ -184,6 +214,7 @@ protected:
 	virtual void set_scale_impl(float scale_x, float scale_y) = 0;
 	virtual void set_color_impl(sf::Color color) = 0;
 	virtual void process_input_string() {}
+	virtual bool gain_focus_condition();
 	virtual bool lose_focus_condition();
 };
 
@@ -200,6 +231,11 @@ public:
 	key_code key;
 	mouse_button mouse;
 	sf::Event::MouseWheelScrollEvent mouse_wheel_scroll;
+
+
+	// Default vector can be implicit when drawing, flag to stop it repeating
+	bool found_default = 0;
+
 
 	// Flag to prevent multiple objects being interacted with at once
 	bool object_focused = 0; 
@@ -238,14 +274,24 @@ public:
 	void get_state();
 
 
+	// Template function to order all draws and updates correctly
+	template <typename... Vec>
+	void draw_objects(Vec&... v)
+	{
+		// If you get error C2665, it means at least one of the arguments is not an ObjVec
+		std::vector<ObjVec*> vec;
+		(vec.push_back(&v), ...);
+		draw_objects_impl(vec);
+	}
 
-	// Call when drawing, will draw all objects in default vector
+	// Call this if the template function doesn't work. Note: This will be drawn first by default, but you can change its order by supplying state.objects to the template function. This function, however, will update and draw simultaneously, producing unexpected behavior.
 	void draw_objects();
 
-	// Call this if using set_vector()
-	void draw_objects(ObjVec& object_vector);	
+	// Call this if the template function doesn't work
+	void draw_objects_impl(ObjVec& object_vector);	
+	void draw_objects_impl(std::vector<ObjVec*> object_vector_vector);	
 
-	// Do not use. Temporarily public because I can't hide it from users while still sharing it with everything that inherits from Object.
+	// Call this if the template function doesn't work
 	void update(ObjVec& object_vector);
 protected:
 };
