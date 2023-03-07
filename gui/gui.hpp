@@ -1,5 +1,6 @@
 #pragma once
 #include <SFML/Graphics.hpp>
+#include <text.hpp>
 #include <iostream>
 #include <sstream>
 #include <vector>
@@ -417,7 +418,6 @@ class Text : public Object
 public:
 	sf::Text text;
 	std::stringstream ss;
-	bool use_ss = 0;
 
 	Text(sf::Vector2f position = { 0, 0 }, unsigned int font_size = 30u, sf::Color color = sf::Color::White);
 
@@ -444,7 +444,9 @@ public:
 	}
 
 
-protected:	
+protected:
+	bool use_ss = 0;	
+
 	friend class TextInput;
 	void update();
 	void draw();
@@ -540,7 +542,7 @@ public:
 	CircleField knob;
 	float min = 0.f, max = 0.f, val = max / 2.f;
 	int precision = 2;
-	//bool fix_the_stupid_bound_bug = 1;
+	
 	Slider(sf::Vector2f position = { 0.f, 0.f }, sf::Vector2f size = { 100.f, 20.f }, float min = 0, float max = 100);
 
 	void update();
