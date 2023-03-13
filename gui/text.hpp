@@ -50,11 +50,11 @@ struct text_props
 namespace sf
 {
     enum class Align
-{
-    LEFT = 0,
-    RIGHT,
-    CENTER
-};
+    {
+        LEFT = 0,
+        RIGHT,
+        CENTER
+    };
     class Font;
 
     ////////////////////////////////////////////////////////////
@@ -65,6 +65,8 @@ namespace sf
     {
     public:
         std::vector<text_props> props;
+        float width = 0.f; // 0 == don't wrap
+        Align alignment = Align::LEFT;
         ////////////////////////////////////////////////////////////
         /// \brief Enumeration of the string drawing styles
         ///
@@ -465,6 +467,7 @@ namespace sf
         mutable FloatRect     m_bounds;                    //!< Bounding rectangle of the text (in local coordinates)
         mutable bool          m_geometryNeedUpdate{ false }; //!< Does the geometry need to be recomputed?
         mutable std::uint64_t m_fontTextureId{ 0 };          //!< The font texture id
+        mutable bool          m_should_align = 0;
     };
 
 } // namespace sf

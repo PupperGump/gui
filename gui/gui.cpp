@@ -284,7 +284,7 @@ void Object::bind(Object& other)
 	bound_to = &other;
 
 	Object* last = NULL; 
-	auto vec = bound_to->bound_objects;
+	auto& vec = bound_to->bound_objects;
 	if (vec.size() > 0)
 		last = vec[vec.size() - 1];
 
