@@ -31,6 +31,14 @@ int main()
 	//s.set_size({ 1000.f, 20.f });
 
 	Text fps, t, mouse, cpos;
+	TextButton al, ac, ar;
+	al.text << "Left";
+	ac.text << "Center";
+	ar.text << "Right";
+	al.button.stick(mouse, Bounds::TOP, Bounds::BOTTOM);
+	ac.button.stick(al.button, Bounds::LEFT, Bounds::RIGHT);
+	ar.button.stick(ac.button, Bounds::LEFT, Bounds::RIGHT);
+
 	ObjVec test;
 	t.set_position_by_bounds(get_window_bounds(Bounds::TOP), Bounds::TOP);
 	fps.set_position_by_bounds(get_window_bounds(Bounds::TOP_RIGHT), Bounds::TOP_RIGHT);
@@ -57,8 +65,7 @@ int main()
 	unsigned int fps_counter = 0, fps_average = 1;
 	float fps_decay = 0.7f, fps_interval_ms = 50.f;
 
-	t.set_size(45);
-	t << "uwuwuwuwuwuwuwujkldasjlkfjsailfghigloksajflkdshgoiahsgsajklfjsdoiaghioshgoi;ajsiodg";
+	t << "uwualdkfjo;aihgioalskdnfdsafihihfoidhsiakgnklzuyioehwioaudsk fjskdljfks dklf jsdklfj shaigsa lkj fldk slfjladj fkjskfdlksad fjklsdfj sdfklj sdlkf jklsdjf klsdjk;lfj klsdkjlfdjkdl fljk kaosghoihalk fkjsklfjlkj fasd jlkj fdosijhfioshgjlkjfsa jfdkjasjkdlf jklsa jfdlksdj afj sdaiofjsdfjsdjflksadj klf jslkajflksd jflks jadklfj kslf";
 	RectField tbox;
 	tbox.set_color({ 0, 0, 0, 0 });
 	tbox.rect.setOutlineColor(sf::Color::Yellow);
@@ -67,7 +74,8 @@ int main()
 	
 	
 	// Text alignment works, but there is a bug with wrapping at seemingly random points
-	// Changing font size increases memory by the gig
+	// Changing font size increases memory by the gig (fixed)
+	// Center and Right alignment break at the same points, meaning the issue is not with the assignment of the x value
 
 	
 	t.text.props[0].fill_color = sf::Color::Red;
@@ -75,6 +83,8 @@ int main()
 	t.text.props[2].fill_color = sf::Color::Blue;
 
 	//t.set_size(50);
+
+	sf::Align alignment = sf::Align::LEFT;
 
 	while (win.isOpen())
 	{
@@ -109,21 +119,28 @@ int main()
 		state.get_state();
 
 		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Up))
-			t.set_position(t.get_position() + sf::Vector2f(0.f, -0.1f));
+			t.set_position(t.get_position() + sf::Vector2f(0.f, -1.f));
 		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Down))
-			t.set_position(t.get_position() + sf::Vector2f(0.f, 0.1f));
+			t.set_position(t.get_position() + sf::Vector2f(0.f, 1.f));
 		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Left))
-			t.set_position(t.get_position() + sf::Vector2f(-0.1f, 0.f));
+			t.set_position(t.get_position() + sf::Vector2f(-1.f, 0.f));
 		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Right))
-			t.set_position(t.get_position() + sf::Vector2f(0.1f, 0.f));
+			t.set_position(t.get_position() + sf::Vector2f(1.f, 0.f));
 
 		tbox.stick(t);
 		tbox.set_size(t.get_bounds(Bounds::BOTTOM_RIGHT) - t.get_position());
 		//std::cout << t.get_bounds(Bounds::BOTTOM_RIGHT).x << '\n';
 		
 		mouse << state.mouse_coord_position.x;
-		cpos << t.text.findCharacterPos(0).x;
-		t.text.align(sf::Align::CENTER, s.val);
+
+		if (al.button.activated)
+			alignment = sf::Align::LEFT;
+		if (ac.button.activated)
+			alignment = sf::Align::CENTER;
+		if (ar.button.activated)
+			alignment = sf::Align::RIGHT;
+
+		t.text.align(alignment, s.val);
 		t.set_size(s2.val);
 
 		win.clear({ 0, 0, 0, 255 });

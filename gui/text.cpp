@@ -471,6 +471,9 @@ namespace sf
 		size_t start = 0;
 		bool wrap = 0, check = 1, set = 1;
 
+		// Wrapping errors occur when width is smaller than the largest character
+		const Glyph& big_glyph = m_font->getGlyph(U'W', m_characterSize, isBold);
+
 		for (std::size_t i = 0; i < m_string.getSize(); ++i)
 		{
 			std::uint32_t curChar = m_string[i];
@@ -495,33 +498,38 @@ namespace sf
 
 
 
-			// Align if told to and current character goes over width
+			// Align if told to
 			if (width > 0.f)
 			{
 				switch (alignment)
 				{
 				case Align::LEFT:
 					// Treat as newline
-					if (x <= width - (glyph.advance + letterSpacing))
-						break;
-					x = 0;
-					y += lineSpacing;
+					if (x > width - (glyph.advance + letterSpacing))
+					{
+						x = 0;
+						y += lineSpacing;
+					}
 					break;
 				case Align::CENTER:
 				case Align::RIGHT:
-					// Use nifty new idea
 					if (i != start)
 						break;
 					float center = width / 2.f;
 					float line_size = 0.f;
-					//float right_border = center + width;
 					std::uint32_t prev = i == 0 ? 0 : m_string[i - 1];
 					std::uint32_t curr = m_string[i];
 
 
 
-					if (start != 0 && x > width - (glyph.advance + letterSpacing))
+					if (start != 0 && i != 0 && x > width - (glyph.advance + letterSpacing))
 						y += lineSpacing;
+
+					// This gives the behavior of a "minimum wrapping width". I'll make it work with smaller values if necessary, but now I have confirmed that, for all practical use, this works perfectly.
+					if (big_glyph.bounds.width > width)
+					{
+						continue;
+					}
 
 					// Check if the first character itself is too wide to fit
 					const Glyph& first_glyph = m_font->getGlyph(m_string[start], m_characterSize, isBold);
