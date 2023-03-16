@@ -38,6 +38,7 @@
 #include <string>
 #include <vector>
 
+
 struct text_props
 {
     sf::Color fill_color;
@@ -467,7 +468,7 @@ namespace sf
         mutable FloatRect     m_bounds;                    //!< Bounding rectangle of the text (in local coordinates)
         mutable bool          m_geometryNeedUpdate{ false }; //!< Does the geometry need to be recomputed?
         mutable std::uint64_t m_fontTextureId{ 0 };          //!< The font texture id
-        mutable bool          m_should_align = 0;
+        mutable bool          m_should_align = 1;
     };
 
 } // namespace sf

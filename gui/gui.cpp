@@ -493,6 +493,7 @@ void WindowState::get_state()
 	found_default = 0;
 
 	mouse_screen_position = sf::Mouse::getPosition(*state->window);
+	mouse_coord_position = state->window->mapPixelToCoords(mouse_screen_position);
 
 	if (mouse_clicked)
 	{

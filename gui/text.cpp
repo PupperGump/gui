@@ -161,7 +161,7 @@ namespace sf
 		if (m_characterSize != size)
 		{
 			m_characterSize = size;
-			m_should_align = 1;
+			m_font->clearPages();
 			m_geometryNeedUpdate = true;
 		}
 	}
@@ -383,8 +383,10 @@ namespace sf
 
 	void Text::align(Align alignment, float width)
 	{
+		m_should_align = 1;
 		this->alignment = alignment;
 		this->width = width;
+		m_geometryNeedUpdate = 1;
 	}
 
 
@@ -466,7 +468,7 @@ namespace sf
 
 		std::uint32_t prevChar = 0;
 
-		size_t first_char = 0;
+		size_t start = 0;
 		bool wrap = 0, check = 1, set = 1;
 
 		for (std::size_t i = 0; i < m_string.getSize(); ++i)
@@ -494,86 +496,80 @@ namespace sf
 
 
 			// Align if told to and current character goes over width
-			if (width > 0.f && m_should_align)
+			if (width > 0.f)
 			{
-				switch (this->alignment)
+				switch (alignment)
 				{
 				case Align::LEFT:
 					// Treat as newline
-					if (x <= width)
+					if (x <= width - (glyph.advance + letterSpacing))
 						break;
 					x = 0;
 					y += lineSpacing;
 					break;
 				case Align::CENTER:
+				case Align::RIGHT:
 					// Use nifty new idea
-
-					// Make sure this doesn't happen to every character after the first-wrapped
-					// Remember, the idea is to find out where to position the first letter based on where the last letter will end up
-
-
+					if (i != start)
+						break;
 					float center = width / 2.f;
 					float line_size = 0.f;
 					//float right_border = center + width;
-
 					std::uint32_t prev = i == 0 ? 0 : m_string[i - 1];
 					std::uint32_t curr = m_string[i];
 
-					// Wrap, check, set, begin at check
-					// Starting char is i
-					// Loop for j until j > width, save j
-					// When j > width offset x by half line size from half width
-					// When setting x wrap line
-					// Starting char comes at j which was greater than width
 
-					// Do we line wrap?
-					if (x > width - (glyph.advance + letterSpacing))
-					{
-						//check = 1;
+
+					if (start != 0 && x > width - (glyph.advance + letterSpacing))
 						y += lineSpacing;
-						std::cout << "y: " << y << '\n';
-					}
 
-					for (std::size_t j = i; j < m_string.getSize(); ++j)
+					// Check if the first character itself is too wide to fit
+					const Glyph& first_glyph = m_font->getGlyph(m_string[start], m_characterSize, isBold);
+					if (first_glyph.advance + letterSpacing > width)
 					{
-						// Figure out how fat the character is
-						const Glyph& temp_glyph = m_font->getGlyph(j, m_characterSize, isBold);
+						// Handle case where first character is too wide
+						// You could add additional logic here to split the character into multiple lines if needed
+						start++;
+						x = 0;
+						break;
+					}
+					for (std::size_t j = start; j < m_string.getSize(); ++j)
+					{
+						// Figure out how fat the character is							
 
-						line_size += m_font->getKerning(prev, curr, m_characterSize, isBold);
-						line_size += temp_glyph.advance + letterSpacing;
-
-						prev = curr;
 						curr = m_string[j];
+						const Glyph& temp_glyph = m_font->getGlyph(curr, m_characterSize, isBold);
+						float next_size = 0.f;
+						next_size += m_font->getKerning(prev, curr, m_characterSize, isBold);
+						next_size += temp_glyph.advance + letterSpacing;
+
 
 						// If we know where the first char of the line is going, just keep adding chars until line wrap
-
-						
-
-						if (j == m_string.getSize() - 1 || line_size > width - (temp_glyph.advance + letterSpacing))
+						if (line_size + next_size > width)
 						{
-							
-							//check = 0;
-							first_char = j;
-							
-							x = abs(center - line_size / 2.f);
-							std::cout << "x: " << x << '\n';
+							start = j;
+							if (alignment == Align::RIGHT)
+								x = width - line_size;
+							else
+								x = center - line_size / 2.f;
 							break;
 						}
+						line_size += next_size;
+						prev = curr;
 
-						if (j != first_char)
+						if (j == m_string.getSize() - 1)
 						{
-							std::cout << "continue lol\n";
+							if (alignment == Align::RIGHT)
+								x = width - line_size;
+							else
+								x = center - line_size / 2.f;
+							break; // It breaks anyways lol
 						}
-
 						// If we find end of line, shift it back by half line size, which should center it
-
-
 					}
-
-
-
 					break;
 				}
+				m_should_align = 0;
 			}
 
 			
@@ -659,8 +655,6 @@ namespace sf
 			// Advance to the next character
 			x += glyph.advance + letterSpacing;
 		}
-
-		m_should_align = 0;
 
 		// If we're using outline, update the current bounds
 		if (m_outlineThickness != 0)

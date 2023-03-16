@@ -228,6 +228,7 @@ public:
 	bool mouse_down = 0, mouse_was_down = 0, mouse_up = 0, mouse_was_up = 0, mouse_clicked = 0;
 
 	sf::Vector2i mouse_screen_position;
+	sf::Vector2f mouse_coord_position;
 
 	key_code key;
 	mouse_button mouse;
