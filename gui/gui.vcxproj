@@ -71,20 +71,20 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <IncludePath>C:\vs\gui\gui;C:\SFML\extlibs\headers;C:\SFML\include;$(IncludePath)</IncludePath>
-    <LibraryPath>C:\SFML\extlibs\libs-msvc-universal\x64;C:\SFML\bin\lib\Debug;$(LibraryPath)</LibraryPath>
+    <IncludePath>$(ProjectDir);$(ProjectDir)SFML\include;$(IncludePath)</IncludePath>
+    <LibraryPath>$(ProjectDir)SFML\extlibs\libs-msvc-universal\x64;$(ProjectDir)SFML\bin\lib\Debug;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <IncludePath>C:\vs\gui\gui;C:\SFML\include;$(IncludePath)</IncludePath>
-    <LibraryPath>C:\SFML\extlibs\libs-msvc-universal\x64;C:\SFML\bin\lib\Release;$(LibraryPath)</LibraryPath>
+    <IncludePath>$(ProjectDir);$(ProjectDir)SFML\include;$(IncludePath)</IncludePath>
+    <LibraryPath>$(ProjectDir)SFML\extlibs\libs-msvc-universal\x64;$(ProjectDir)SFML\bin\lib\Release;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>C:\vs\gui\gui;C:\SFML\extlibs\headers;C:\SFML\include;$(IncludePath)</IncludePath>
-    <LibraryPath>C:\SFML\extlibs\libs-msvc-universal\x64;C:\SFML\bin\lib\Debug;$(LibraryPath)</LibraryPath>
+    <IncludePath>$(ProjectDir);$(ProjectDir)SFML\include;$(IncludePath)</IncludePath>
+    <LibraryPath>$(ProjectDir)SFML\extlibs\libs-msvc-universal\x64;$(ProjectDir)SFML\bin\lib\Debug;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <IncludePath>C:\vs\gui\gui;C:\SFML\include;$(IncludePath)</IncludePath>
-    <LibraryPath>C:\SFML\extlibs\libs-msvc-universal\x64;C:\SFML\bin\lib\Release;$(LibraryPath)</LibraryPath>
+    <IncludePath>$(ProjectDir);$(ProjectDir)SFML\include;$(IncludePath)</IncludePath>
+    <LibraryPath>$(ProjectDir)SFML\extlibs\libs-msvc-universal\x64;$(ProjectDir)SFML\bin\lib\Release;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -121,6 +121,9 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalDependencies>legacy_stdio_definitions.lib;freetype.lib;ws2_32.lib;gdi32.lib;winmm.lib;opengl32.lib;sfml-window-s.lib;sfml-system-s.lib;sfml-graphics-s.lib;sfml-network-s.lib;sfml-audio-s.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <PreBuildEvent>
+      <Command>echo $(ProjectDir)</Command>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
@@ -157,6 +160,9 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalDependencies>legacy_stdio_definitions.lib;freetype.lib;ws2_32.lib;gdi32.lib;winmm.lib;opengl32.lib;sfml-window-s.lib;sfml-system-s.lib;sfml-graphics-s.lib;sfml-network-s.lib;sfml-audio-s.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <PreBuildEvent>
+      <Command>echo $(ProjectDir)</Command>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="gui.cpp" />

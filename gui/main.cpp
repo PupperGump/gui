@@ -65,17 +65,11 @@ int main()
 	unsigned int fps_counter = 0, fps_average = 1;
 	float fps_decay = 0.7f, fps_interval_ms = 50.f;
 
-	t << "uwualdkfjo;aihgioalskdnfdsafihihfoidhsiakgnklzuyioehwioaudsk fjskdljfks dklf jsdklfj shaigsa lkj fldk slfjladj fkjskfdlksad fjklsdfj sdfklj sdlkf jklsdjf klsdjk;lfj klsdkjlfdjkdl fljk kaosghoihalk fkjsklfjlkj fasd jlkj fdosijhfioshgjlkjfsa jfdkjasjkdlf jklsa jfdlksdj afj sdaiofjsdfjsdjflksadj klf jslkajflksd jflks jadklfj kslf";
+	t << "It's a beautiful day outside, with the sun shining brightly and the birds chirping happily. I can hear the gentle rustling of leaves in the trees and feel the soft breeze on my skin. However, my stomach is growling loudly, so I think it's time to grab a bite to eat! I'm craving a juicy burger with all the fixings - lettuce, tomato, pickles, cheese, and a generous dollop of ketchup. Maybe I'll even treat myself to some crispy french fries and a refreshing soda. Yum!";
 	RectField tbox;
 	tbox.set_color({ 0, 0, 0, 0 });
 	tbox.rect.setOutlineColor(sf::Color::Yellow);
 	tbox.rect.setOutlineThickness(2.f);
-
-	
-	
-	// Text alignment works, but there is a bug with wrapping at seemingly random points
-	// Changing font size increases memory by the gig (fixed)
-	// Center and Right alignment break at the same points, meaning the issue is not with the assignment of the x value
 
 	
 	t.text.props[0].fill_color = sf::Color::Red;

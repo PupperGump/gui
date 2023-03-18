@@ -505,6 +505,10 @@ namespace sf
 				{
 				case Align::LEFT:
 					// Treat as newline
+					// Wrap at spaces would mean working outside the confines of the i loop
+					// But maybe I could use a character or string position as a reference for line size to work with the center conditions
+					// if (i == token && line_size > width)
+					// expected behavior: token found, find end of current line, if find another token, start = token, wrap if no token found
 					if (x > width - (glyph.advance + letterSpacing))
 					{
 						x = 0;
@@ -553,6 +557,8 @@ namespace sf
 
 
 						// If we know where the first char of the line is going, just keep adding chars until line wrap
+						
+						// If we find end of line, shift it back by half line size, which should center it
 						if (line_size + next_size > width)
 						{
 							start = j;
@@ -573,7 +579,7 @@ namespace sf
 								x = center - line_size / 2.f;
 							break; // It breaks anyways lol
 						}
-						// If we find end of line, shift it back by half line size, which should center it
+						
 					}
 					break;
 				}
