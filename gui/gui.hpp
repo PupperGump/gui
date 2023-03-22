@@ -1,6 +1,5 @@
 #pragma once
 #include <SFML/Graphics.hpp>
-#include <text.hpp>
 #include <iostream>
 #include <sstream>
 #include <vector>
@@ -265,6 +264,8 @@ public:
 	void hide_all();
 	void show(Object& object, bool is_caller = 1);
 	void hide(Object& object, bool is_caller = 1);
+	void show(std::vector<Object>& objects);
+	void hide(std::vector<Object>& objects);
 	void show(ObjVec& object_vector);
 	void hide(ObjVec& object_vector);
 
@@ -419,6 +420,7 @@ class Text : public Object
 public:
 	sf::Text text;
 	std::stringstream ss;
+	bool keep_text = 0;
 
 	Text(sf::Vector2f position = { 0, 0 }, unsigned int font_size = 30u, sf::Color color = sf::Color::White);
 
@@ -468,6 +470,8 @@ public:
 	Text text;
 
 	TextButton(sf::Vector2f position = { 0.f, 0.f }, sf::Vector2f size = { 100.f, 100.f }, sf::Color color = sf::Color::Blue);
+
+	void set_size(sf::Vector2f size);
 };
 
 
@@ -485,6 +489,7 @@ public:
 
 	void fit_rect();
 	void set_grid(unsigned int width = 1, unsigned int height = 3);
+	void set_size(sf::Vector2f size);
 	void set_padding(sf::Vector2f padding);
 };
 

@@ -366,6 +366,17 @@ void WindowState::hide_all()
 	}
 }
 
+void WindowState::show(std::vector<Object>& objects)
+{
+	for (auto& obj : objects)
+		obj.hide_object = 1;
+}
+void WindowState::hide(std::vector<Object>& objects)
+{
+	for (auto& obj : objects)
+		obj.hide_object = 0;
+}
+
 // These use the recursive implementation for bound objects
 void WindowState::show(Object& object, bool is_caller)
 {
@@ -1243,8 +1254,11 @@ void Text::draw()
 	if (use_ss)
 	{
 		set_string(ss.str());
-		ss.str("");
-		ss.clear();
+		if (!keep_text)
+		{
+			ss.str("");
+			ss.clear();
+		}
 		use_ss = 0;
 	}
 	state->window->draw(text);
@@ -1263,6 +1277,12 @@ TextButton::TextButton(sf::Vector2f position, sf::Vector2f size, sf::Color color
 
 	text.set_position_by_bounds(button.get_bounds(Bounds::CENTER), Bounds::CENTER);
 	text.bind(button);
+}
+
+void TextButton::set_size(sf::Vector2f size)
+{
+	button.set_size(size);
+	text.set_position_by_bounds(button.get_bounds(Bounds::CENTER), Bounds::CENTER);
 }
 
 
@@ -1290,7 +1310,6 @@ Menu::Menu(unsigned int width, unsigned int height)
 	rect.setFillColor({ 100, 100, 100, 100 });
 	set_grid(width, height);
 }
-
 
 void Menu::fit_rect()
 {
@@ -1323,6 +1342,16 @@ void Menu::set_grid(unsigned int width, unsigned int height)
 	}
 }
 
+void Menu::set_size(sf::Vector2f size)
+{
+	for (auto& b : buttons)
+	{
+		b.set_size(size);
+	}
+	set_grid(width, height);
+	fit_rect();
+}
+
 void Menu::set_padding(sf::Vector2f padding)
 {
 	this->padding = padding;
@@ -1330,8 +1359,8 @@ void Menu::set_padding(sf::Vector2f padding)
 	{
 		obj.button.padding = padding;
 	}
-	fit_rect();
 	set_grid(width, height);
+	fit_rect();
 }
 
 
