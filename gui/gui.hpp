@@ -70,6 +70,8 @@ struct mouse_button
 class Object;
 typedef std::vector<Object*> ObjVec; // So it doesn't look so ugly
 
+
+// Tests because templates are dumb
 template<typename T>
 void printTypeName()
 {
@@ -91,6 +93,8 @@ void printTypeNames(Args&... args)
 	std::cout << "\n";
 }
 
+
+// Moves objects to the ObjVec object_vector. Will work for anything derived from class Object.
 template<class... Obj>
 void set_vector(ObjVec& object_vector, Obj&... obj)
 {
@@ -150,7 +154,7 @@ public:
 	// This will put the object at the end of the default vector. Use move_vector() if you want to change this.
 	void unbind();
 
-	// Basically sfml wrapper functions that affect bound objects
+	// Basically sfml wrapper functions that affects bound objects if affect_bound is true
 
 	virtual void set_position(sf::Vector2f position, bool affect_bound = 1);
 	virtual void set_scale(float scale_x, float scale_y = 0.f, bool affect_bound = 1);
@@ -180,11 +184,6 @@ public:
 	//virtual sf::Color get_color() = 0;
 
 
-
-
-
-
-
 protected:
 	friend class WindowState;
 
@@ -206,11 +205,14 @@ protected:
 	virtual void draw() {}
 
 	virtual void set_position(sf::Vector2f position, bool is_caller, bool affect_bound);
+	//virtual void set_size(float size, bool is_caller, bool affect_bound);
+	//virtual void set_size(sf::Vector2f size, bool is_caller, bool affect_bound);
 	virtual void set_scale(float scale_x, float scale_y, bool is_caller, bool affect_bound);
 	virtual void set_color(sf::Color color, bool is_caller, bool affect_bound);
 	virtual void set_padding(sf::Vector2f padding, bool is_caller);
 
 	virtual void set_position_impl(sf::Vector2f position) = 0;
+	//virtual void set_size_impl(sf::Vector2f size) {}
 	virtual void set_scale_impl(float scale_x, float scale_y) = 0;
 	virtual void set_color_impl(sf::Color color) = 0;
 	virtual void process_input_string() {}
@@ -259,16 +261,14 @@ public:
 
 	// Required when using default constructor
 	void set_window(sf::RenderWindow& window);
+	
+	// Gets the position of the window boundaries. Default is center.
+	sf::Vector2f get_window_bounds(unsigned int type = Bounds::CENTER, float scale_x = 1.f, float scale_y = 1.f);
 
-	void show_all();
-	void hide_all();
 	void show(Object& object, bool is_caller = 1);
 	void hide(Object& object, bool is_caller = 1);
-	void show(std::vector<Object>& objects);
-	void hide(std::vector<Object>& objects);
 	void show(ObjVec& object_vector);
 	void hide(ObjVec& object_vector);
-
 
 	// Call inside event loop
 	void get_events(sf::Event& event);
@@ -305,13 +305,6 @@ protected:
 bool set_state(WindowState& state_instance);
 
 
-
-
-// Gets the position of the window boundaries. Default is center.
-sf::Vector2f get_window_bounds(unsigned int type = Bounds::CENTER, float scale_x = 1.f, float scale_y = 1.f);
-
-
-
 // A rectangle field class that handles boundaries and collision
 class RectField : public Object
 {
@@ -320,11 +313,13 @@ public:
 
 	RectField(sf::Vector2f position = { 0, 0 }, sf::Vector2f size = { 100, 100 }, sf::Color color = sf::Color::Blue);
 
-	void set_size(sf::Vector2f size);
+	
 
 	sf::Vector2f get_size();
 	
 	sf::Vector2f get_position();
+	
+	void set_size(sf::Vector2f size);
 
 	//sf::Vector2f get_scale();
 
@@ -342,6 +337,7 @@ protected:
 
 	void set_position_impl(sf::Vector2f position);
 	void set_color_impl(sf::Color color);
+	
 	void set_scale_impl(float scale_x, float scale_y);
 };
 
@@ -386,13 +382,15 @@ public:
 
 	CircleField(sf::Vector2f position = { 0, 0 }, float size = 100, sf::Color color = sf::Color::Blue);
 
-	void set_size(float size);
+	
 
 	float get_size();
 
 	sf::Vector2f get_position();
 
 	//sf::Vector2f get_scale();
+	
+	void set_size(float size);
 
 	sf::Vector2f get_bounds(unsigned int type = Bounds::CENTER, float scale_x = 1.f, float scale_y = 1.f);
 
@@ -463,15 +461,15 @@ protected:
 
 
 // A convenience class that binds a text to a button and centers the text
-class TextButton
+class TextButton : public Button
 {
 public:
-	Button button;
+	ObjVec vec;
 	Text text;
 
 	TextButton(sf::Vector2f position = { 0.f, 0.f }, sf::Vector2f size = { 100.f, 100.f }, sf::Color color = sf::Color::Blue);
 
-	void set_size(sf::Vector2f size);
+	void set_size_impl(sf::Vector2f size);
 };
 
 
@@ -483,13 +481,15 @@ public:
 	unsigned int width = 1, height = 1;
 	bool called = 0;
 	sf::Vector2f start;
+	
+	void set_size(sf::Vector2f size);
 
 	// Width and height refers to how many buttons in either direction
 	Menu(unsigned int width = 1, unsigned int height = 3);
 
 	void fit_rect();
 	void set_grid(unsigned int width = 1, unsigned int height = 3);
-	void set_size(sf::Vector2f size);
+	
 	void set_padding(sf::Vector2f padding);
 };
 

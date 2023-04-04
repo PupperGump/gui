@@ -19,45 +19,15 @@ int main()
 
 	sf::Clock fps_clock;
 
-	//TextInput in({ 1000.f, 100.f }, { 200.f, 500.f });
-	//in.set_size({ 400.f, 500.f });
-	//in.line_limit = 3;
-	Slider s({ 0.f, 0.f }, { 1000.f, 20.f }, 0.f, 1000.f);
-	s.precision = 1;
-	s.set_position_by_bounds(get_window_bounds(Bounds::CENTER), Bounds::CENTER);
-	s.set_color(sf::Color::Green, 0);
-	s.knob.set_color(sf::Color::Yellow);
-	Slider s2({ 0.f, 0.f }, { 1000.f, 20.f }, 0.f, 1000.f);
-	s2.precision = 0;
-	s2.set_color(sf::Color::Blue, 0);
-	s2.knob.set_color(sf::Color::Green);
-	s2.set_position_by_bounds(s.get_bounds(Bounds::BOTTOM), Bounds::TOP, 1.f, 15.f);
-	Slider s3({ 0.f, 0.f }, { 1000.f, 20.f }, 0.f, 1000.f);
-	s3.precision = 0;
-	s3.set_color(sf::Color::Red, 0);
-	s3.knob.set_color(sf::Color::Cyan);
-	s3.set_position_by_bounds(s2.get_bounds(Bounds::BOTTOM), Bounds::TOP, 1.f, 15.f);
-
 	//s.set_size({ 1000.f, 20.f });
 
-	Text fps, t, mem_text, t2, t3, t4, t5;
-	TextButton al, ac, ar;
-	al.text << "Left";
-	ac.text << "Center";
-	ar.text << "Right";
-	al.button.stick(mem_text, Bounds::TOP, Bounds::BOTTOM);
-	ac.button.stick(al.button, Bounds::LEFT, Bounds::RIGHT);
-	ar.button.stick(ac.button, Bounds::LEFT, Bounds::RIGHT);
+	Text fps, mem_text1, mem_text2, objects_text;
+
+	mem_text2.stick(mem_text1, Bounds::TOP_LEFT, Bounds::BOTTOM_LEFT);
+	objects_text.stick(mem_text2, Bounds::TOP_LEFT, Bounds::BOTTOM_LEFT);
 
 	ObjVec test;
-	t.set_position_by_bounds(get_window_bounds(Bounds::TOP), Bounds::TOP);
-	t2.set_position_by_bounds(t.get_bounds(Bounds::BOTTOM), Bounds::TOP);
-	t3.set_position_by_bounds(t2.get_bounds(Bounds::BOTTOM), Bounds::TOP);
-	t4.set_position_by_bounds(t3.get_bounds(Bounds::BOTTOM), Bounds::TOP);
-	t5.set_position_by_bounds(t4.get_bounds(Bounds::BOTTOM), Bounds::TOP);
-	fps.set_position_by_bounds(get_window_bounds(Bounds::TOP_RIGHT), Bounds::TOP_RIGHT);
-
-	t2.text.setFont(state.fonts[1]);
+	fps.set_position_by_bounds(state.get_window_bounds(Bounds::TOP_RIGHT), Bounds::TOP_RIGHT);
 
 	// todo: scrollbar, tree/dropdown elements, get events better, color pickers, cursor change, basic file menu, realtime gui change and save gui state, graphs, allow multiple windows and states
 
@@ -74,31 +44,22 @@ int main()
 	// Formatting floats without rounding sometimes causes -0 to appear in slider val
 	// Hovering over slider knob gains user focus before first click
 
-	set_vector(test, s, s2, fps);
+	// Potential issue: Objects retain user focus after being hidden (fixed)
+
+	// I'm gonna change set_size() to work with ratios of the given videomode by default. 
+
+	set_vector(test, fps);
 	//state.hide(test);
 	//state.show(test);
 	unsigned int fps_counter = 0, fps_average = 1;
 	float fps_decay = 0.7f, fps_interval_ms = 50.f;
 
-	t << "It's a beautiful day outside, with the sun shining brightly and the birds chirping happily. I can hear the gentle rustling of leaves in the trees and feel the soft breeze on my skin. However, my stomach is growling loudly, so I think it's time to grab a bite to eat! I'm craving a juicy burger with all the fixings - lettuce, tomato, pickles, cheese, and a generous dollop of ketchup. Maybe I'll even treat myself to some crispy french fries and a refreshing soda. Yum!";
-	RectField tbox;
-	tbox.set_color({ 0, 0, 0, 0 });
-	tbox.rect.setOutlineColor(sf::Color::Yellow);
-	tbox.rect.setOutlineThickness(2.f);
-
-	
-	t.text.props[0].fill_color = sf::Color::Red;
-	t.text.props[1].fill_color = sf::Color::Green;
-	t.text.props[2].fill_color = sf::Color::Blue;
-
-	//t.set_size(50);
-
-	sf::Align alignment = sf::Align::LEFT;
+	//int arr[2048];
 
 	PROCESS_MEMORY_COUNTERS mem_counter;
 
+	std::vector<Button> buttons;
 
-	unsigned short fontsize = 0;
 	while (win.isOpen())
 	{
 		while (win.pollEvent(event))
@@ -108,21 +69,6 @@ int main()
 			switch (event.type)
 			{
 			case sf::Event::KeyPressed:
-				//if (sf::Keyboard::isKeyPressed(sf::Keyboard::LControl))
-				//{
-				//	switch (event.key.code)
-				//	{
-				//	case sf::Keyboard::R:
-				//		in.set_alignment(Align::RIGHT);
-				//		break;
-				//	case sf::Keyboard::L:
-				//		in.set_alignment(Align::LEFT);
-				//		break;
-				//	case sf::Keyboard::C:
-				//		in.set_alignment(Align::CENTER);
-				//		break;
-				//	}
-				//}
 				break;
 			case sf::Event::Closed:
 				win.close();
@@ -131,43 +77,23 @@ int main()
 		}
 		state.get_state();
 
-		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Up))
-			t.set_position(t.get_position() + sf::Vector2f(0.f, -1.f));
-		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Down))
-			t.set_position(t.get_position() + sf::Vector2f(0.f, 1.f));
-		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Left))
-			t.set_position(t.get_position() + sf::Vector2f(-1.f, 0.f));
-		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Right))
-			t.set_position(t.get_position() + sf::Vector2f(1.f, 0.f));
+		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Space))
+		{
+			buttons.push_back(Button(state.mouse_coord_position));
+		}
+		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Backspace))
+		{
+			if (buttons.size() > 0)
+				buttons.resize(1);
+		}
 
-		tbox.stick(t);
-		tbox.set_size(t.get_bounds(Bounds::BOTTOM_RIGHT) - t.get_position());
-		
 		BOOL result = K32GetProcessMemoryInfo(GetCurrentProcess(), &mem_counter, sizeof(mem_counter));
-		mem_text << mem_counter.WorkingSetSize;
-
-		if (al.button.activated)
-			alignment = sf::Align::LEFT;
-		if (ac.button.activated)
-			alignment = sf::Align::CENTER;
-		if (ar.button.activated)
-			alignment = sf::Align::RIGHT;
-
-		t.text.align(alignment, s.val);
-		t.set_size(s2.val);
-		fps.set_size(s3.val);
-		
-		t2.set_size(fontsize++);
-
-		if (fontsize > 400)
-			fontsize = 0;
+		mem_text1 << "Total memory: " << mem_counter.PagefileUsage / 1000000 << "MB";
+		mem_text2 << "Working set: " << mem_counter.WorkingSetSize / 1000000 << "MB";
+		objects_text << "state.objects size: " << state.objects.size();
 
 		win.clear({ 0, 0, 0, 255 });
 
-		//t << state.keyboard_input;
-		
-
-		//state.update(s.vec);
 		state.draw_objects(test);
 
 

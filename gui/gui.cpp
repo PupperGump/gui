@@ -1,6 +1,7 @@
 #include <gui.hpp>
 
 WindowState* state;
+const std::string fontfolder = "C:\\Windows\\Fonts\\";
 
 
 bool set_state(WindowState& state_input)
@@ -11,7 +12,7 @@ bool set_state(WindowState& state_input)
 
 	// init default resources (todo: add more fonts and an enum)
 	sf::Font font;
-	if (!font.loadFromFile("arial.ttf"))
+	if (!font.loadFromFile(fontfolder + "arial.ttf"))
 		std::cout << "Missing default font: arial.ttf\n";
 	state->fonts.push_back(font);
 
@@ -165,6 +166,34 @@ void Object::set_position(sf::Vector2f position, bool is_caller, bool affect_bou
 
 	set_position_impl(get_position() + state->offset);
 }
+
+//void Object::set_size(sf::Vector2f size, bool affect_bound)
+//{
+//	set_size(size, 1, affect_bound);
+//}
+//
+//void Object::set_size(sf::Vector2f size, bool is_caller, bool affect_bound)
+//{
+//	if (is_caller)
+//	{
+//		state->caller = this;
+//	}
+//	else
+//	{
+//		if (state->caller == this)
+//			return;
+//	}
+//	for (auto& obj : bound_objects)
+//	{
+//		// If scale_y is 0, use scale_x for both
+//		if (obj->affected_by_bound)
+//		{
+//			obj->set_size(size, 0, 1);
+//		}
+//	}
+//
+//	set_size_impl(size);
+//}
 
 void Object::set_scale(float scale_x, float scale_y, bool affect_bound)
 {
@@ -351,32 +380,6 @@ void WindowState::set_window(sf::RenderWindow& window)
 	views.push_back(window.getDefaultView());
 }
 
-void WindowState::show_all()
-{
-	for (auto& obj : state->objects)
-	{
-		obj->hide_object = 0;
-	}
-}
-void WindowState::hide_all()
-{
-	for (auto& obj : state->objects)
-	{
-		obj->hide_object = 1;
-	}
-}
-
-void WindowState::show(std::vector<Object>& objects)
-{
-	for (auto& obj : objects)
-		obj.hide_object = 1;
-}
-void WindowState::hide(std::vector<Object>& objects)
-{
-	for (auto& obj : objects)
-		obj.hide_object = 0;
-}
-
 // These use the recursive implementation for bound objects
 void WindowState::show(Object& object, bool is_caller)
 {
@@ -394,6 +397,10 @@ void WindowState::show(Object& object, bool is_caller)
 		object.hide_object = 0;
 	}
 
+	for (auto& objvec : object.obj_vecs)
+	{
+		show(*objvec);
+	}
 	object.hide_object = 0;
 }
 
@@ -415,6 +422,11 @@ void WindowState::hide(Object& object, bool is_caller)
 		object.hide_object = 1;
 	}
 
+	for (auto& objvec : object.obj_vecs)
+	{
+		hide(*objvec);
+	}
+
 	object.hide_object = 1;
 }
 
@@ -422,14 +434,14 @@ void WindowState::show(ObjVec& object_vector)
 {
 	for (auto& obj : object_vector)
 	{
-		obj->hide_object = 0;
+		show(*obj);
 	}
 }
 void WindowState::hide(ObjVec& object_vector)
 {
 	for (auto& obj : object_vector)
 	{
-		obj->hide_object = 1;
+		hide(*obj);
 	}
 }
 
@@ -536,7 +548,11 @@ void WindowState::update(ObjVec& object_vector)
 		if (object_vector[i] == NULL)
 			continue;
 		if (object_vector[i]->hide_object)
+		{
+			// If object is hidden it shouldn't keep focus
+			object_vector[i]->has_user_focus = 0;
 			continue;
+		}
 
 		//object_vector[i]->locked_focus = 0;		
 
@@ -585,7 +601,7 @@ void WindowState::draw_objects()
 {
 	// I changed it again. Bound objects will be positioned directly after the last object in bound_to->bound_objects. In other words, bound objects will appear above what they're bound to, and those that are bound later will appear above the rest.
 
-	draw_objects_impl(objects);
+	draw_objects(objects);
 }
 
 void WindowState::draw_objects_impl(std::vector<ObjVec*> vec)
@@ -604,10 +620,6 @@ void WindowState::draw_objects_impl(std::vector<ObjVec*> vec)
 			found_default = 1;
 	}
 
-	for (int i = 0; i < vec.size(); i++)
-	{
-
-	}
 	for (int i = vec.size() - 1; i >= 0; i--)
 	{
 		for (auto& obj : *vec[i])
@@ -621,13 +633,12 @@ void WindowState::draw_objects_impl(std::vector<ObjVec*> vec)
 	}
 	if (!found_default)
 	{
-		update(state->objects);
-		draw_objects_impl(state->objects);
+		draw_objects();
 	}
 	for (int i = 0; i < vec.size(); i++)
 	{
 
-		draw_objects_impl(*vec[i]);		
+		draw_objects_impl(*vec[i]);
 		
 		for (auto& obj : *vec[i])
 		{
@@ -662,7 +673,7 @@ void WindowState::draw_objects_impl(ObjVec& object_vector)
 	state->window->setView(state->window->getDefaultView());
 }
 
-sf::Vector2f get_window_bounds(unsigned int type, float scale_x, float scale_y)
+sf::Vector2f WindowState::get_window_bounds(unsigned int type, float scale_x, float scale_y)
 {
 	// I could use sf::VideoMode::getDesktopMode(), however, I'm not sure if it will reference the correct "current" mode, especially if multiple windows are open. Since a new window is supplied for each state for different windows, I'd rather just use the window's information.
 	// After testing, I find that although the view stretches and shrinks weirdly the boundaries remain consistent.
@@ -837,7 +848,7 @@ RectView::RectView(sf::Vector2f viewport_position, sf::Vector2f viewport_size, s
 
 void RectView::set_viewport(sf::Vector2f viewport_position, sf::Vector2f viewport_size)
 {
-	sf::Vector2f wb = get_window_bounds(Bounds::BOTTOM_RIGHT);
+	sf::Vector2f wb = state->get_window_bounds(Bounds::BOTTOM_RIGHT);
 	//sf::Vector2f wb = { 2560.f, 1540.f };
 	sf::Vector2f wbs = { 1.f / wb.x, 1.f / wb.y };
 	//std::cout << "(" << wbs.x << ", " << wbs.y << ")\n";
@@ -1271,18 +1282,21 @@ void Text::draw()
 
 TextButton::TextButton(sf::Vector2f position, sf::Vector2f size, sf::Color color)
 {
-	button.set_position(position);
-	button.set_size(size);
-	button.set_color(color);
+	set_position(position);
+	set_size(size);
+	set_color(color);
 
-	text.set_position_by_bounds(button.get_bounds(Bounds::CENTER), Bounds::CENTER);
-	text.bind(button);
+	text.set_position_by_bounds(get_bounds(Bounds::CENTER), Bounds::CENTER);
+	text.bind(*this);
+
+	::set_vector(vec, text);
+	obj_vecs.push_back(&vec);
 }
 
-void TextButton::set_size(sf::Vector2f size)
+void TextButton::set_size_impl(sf::Vector2f size)
 {
-	button.set_size(size);
-	text.set_position_by_bounds(button.get_bounds(Bounds::CENTER), Bounds::CENTER);
+	Button::set_size(size);
+	text.set_position_by_bounds(get_bounds(Bounds::CENTER), Bounds::CENTER);
 }
 
 
@@ -1305,7 +1319,7 @@ Menu::Menu(unsigned int width, unsigned int height)
 	fit_rect();
 	for (auto& obj : buttons)
 	{
-		obj.button.bind(*this);
+		obj.bind(*this);
 	}
 	rect.setFillColor({ 100, 100, 100, 100 });
 	set_grid(width, height);
@@ -1313,13 +1327,13 @@ Menu::Menu(unsigned int width, unsigned int height)
 
 void Menu::fit_rect()
 {
-	sf::Vector2f size = buttons[0].button.rect.getSize();
+	sf::Vector2f size = buttons[0].rect.getSize();
 	rect.setSize({ (width * (size.x + padding.x)) + padding.x, (height * (size.y + padding.y)) + padding.y });
 }
 
 void Menu::set_grid(unsigned int width, unsigned int height)
 {
-	buttons[0].button.set_position_by_bounds(get_bounds(Bounds::TOP_LEFT), Bounds::TOP_LEFT);
+	buttons[0].set_position_by_bounds(get_bounds(Bounds::TOP_LEFT), Bounds::TOP_LEFT);
 	
 	for (int i = 1; i < buttons.size(); i++)
 	{
@@ -1331,13 +1345,13 @@ void Menu::set_grid(unsigned int width, unsigned int height)
 		if (col != 0)
 		{
 			// Position the current button to the right of the previous button
-			buttons[i].button.set_position_by_bounds(buttons[i - 1].button.get_bounds(Bounds::RIGHT), Bounds::LEFT);
+			buttons[i].set_position_by_bounds(buttons[i - 1].get_bounds(Bounds::RIGHT), Bounds::LEFT);
 		}
 		// If the current button is in the next row
 		else
 		{
 			// Position the current button below the first button in the previous row
-			buttons[i].button.set_position_by_bounds(buttons[i - width].button.get_bounds(Bounds::BOTTOM), Bounds::TOP);
+			buttons[i].set_position_by_bounds(buttons[i - width].get_bounds(Bounds::BOTTOM), Bounds::TOP);
 		}
 	}
 }
@@ -1357,7 +1371,7 @@ void Menu::set_padding(sf::Vector2f padding)
 	this->padding = padding;
 	for (auto& obj : buttons)
 	{
-		obj.button.padding = padding;
+		obj.padding = padding;
 	}
 	set_grid(width, height);
 	fit_rect();
