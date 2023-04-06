@@ -107,7 +107,7 @@ class Object
 public:
 	std::string name = "Object";
 	bool hovered = 0, mouse_down_with_no_hover = 0, mouse_clicked_with_no_hover = 0, activated = 0, toggled = 0, has_user_focus = 0;
-	bool ignore_focus = 0, locked_focus = 0; // Only allow the user to interact with one object at a time. Objects will be drawn in the order they're created and updated in reverse, so the topmost object will "catch" the user and set WindowState::object_focused to 1.
+	bool ignore_focus = 0; // Only allow the user to interact with one object at a time. Objects will be drawn in the order they're created and updated in reverse, so the topmost object will "catch" the user and set WindowState::object_focused to 1.
 
 	// Information used to reposition in case of size changes (such as text alignment)
 	sf::Vector2f position_reference, new_position, padding; // No padding by default
@@ -129,7 +129,6 @@ public:
 
 	// Some objects may need ObjVecs paired with them for convenience, without the inconvenience of binding.
 	std::vector<ObjVec*> obj_vecs;
-	bool vec_drawn = 0;
 
 
 	Object();

@@ -30,14 +30,16 @@ bool set_state(WindowState& state_input)
 
 Object::Object() 
 {
+	//std::cout << "Object created\n";
 	push_vector(state->objects);
 	current_vector = &state->objects;
 	view_ptr = &state->views[0];
 }
 Object::~Object()
 {
+	//std::cout << "Object destroyed\n";
 	unbind();
-	remove_vector(state->objects);
+	remove_vector(*current_vector);
 }
 
 void Object::push_vector(ObjVec& object_vector)
@@ -590,7 +592,7 @@ void WindowState::update(ObjVec& object_vector)
 				if (!object_vector[i]->catch_focus)
 				{
 					object_focused = 1;
-					object_vector[i]->locked_focus = 1;
+					//object_vector[i]->locked_focus = 1;
 				}
 			}
 		}

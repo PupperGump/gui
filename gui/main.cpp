@@ -52,7 +52,7 @@ int main()
 	//state.hide(test);
 	//state.show(test);
 	unsigned int fps_counter = 0, fps_average = 1;
-	float fps_decay = 0.7f, fps_interval_ms = 50.f;
+	float fps_decay = 0.9f, fps_interval_ms = 50.f;
 
 	//int arr[2048];
 
@@ -79,17 +79,20 @@ int main()
 
 		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Space))
 		{
-			buttons.push_back(Button(state.mouse_coord_position));
+			buttons.emplace_back();
+			buttons[buttons.size() - 1].set_position(state.mouse_coord_position);
 		}
 		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Backspace))
 		{
 			if (buttons.size() > 0)
-				buttons.resize(1);
+				buttons.clear();
 		}
 
+		
+
 		BOOL result = K32GetProcessMemoryInfo(GetCurrentProcess(), &mem_counter, sizeof(mem_counter));
-		mem_text1 << "Total memory: " << mem_counter.PagefileUsage / 1000000 << "MB";
-		mem_text2 << "Working set: " << mem_counter.WorkingSetSize / 1000000 << "MB";
+		mem_text1 << "Total memory: " << mem_counter.PagefileUsage / 1000000.f << "MB";
+		mem_text2 << "Working set: " << mem_counter.WorkingSetSize / 1000000.f << "MB";
 		objects_text << "state.objects size: " << state.objects.size();
 
 		win.clear({ 0, 0, 0, 255 });
