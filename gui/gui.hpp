@@ -132,6 +132,7 @@ public:
 
 
 	Object();
+	Object(const Object& other);
 	~Object();
 
 	// Moves the object to the given index of the given vector

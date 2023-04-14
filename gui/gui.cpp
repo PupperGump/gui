@@ -35,6 +35,12 @@ Object::Object()
 	current_vector = &state->objects;
 	view_ptr = &state->views[0];
 }
+Object::Object(const Object& other)
+{
+	*this = other;
+	push_vector(state->objects);
+	current_vector = &state->objects;
+}
 Object::~Object()
 {
 	//std::cout << "Object destroyed\n";
