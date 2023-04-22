@@ -551,6 +551,8 @@ public:
 	
 	Slider(sf::Vector2f position = { 0.f, 0.f }, sf::Vector2f size = { 100.f, 20.f }, float min = 0, float max = 100);
 
+	void set_range(float min, float max, float val);
+
 	void update();
 
 	void draw();

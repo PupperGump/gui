@@ -1915,6 +1915,21 @@ void Slider::update()
 	tval << std::fixed << std::setprecision(precision) << val;
 }
 
+void Slider::set_range(float min, float max, float val)
+{
+	this->min = min;
+	this->max = max;
+	
+	if (val > 0)
+		this->val = max / 2.f;
+	else
+		this->val = val;
+
+	tmin << min;
+	tmax << max;
+	tval << std::fixed << std::setprecision(precision) << val;
+}
+
 void Slider::draw()
 {
 	//state->update(vec);
