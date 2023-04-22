@@ -14,8 +14,6 @@ int main()
 	set_state(state);
 
 	state.fonts.resize(5);
-	
-	state.fonts[1].loadFromFile("C:\\Windows\\Fonts\\brushsci.ttf");
 
 	sf::Clock fps_clock;
 
@@ -49,17 +47,46 @@ int main()
 	// I'm gonna change set_size() to work with ratios of the given videomode by default. 
 
 	set_vector(test, fps);
-	//state.hide(test);
-	//state.show(test);
+
+	TextButton al, ac, ar;
+	al.set_padding({ 10.f, 10.f });
+	ac.set_padding({ 10.f, 10.f });
+	ar.set_padding({ 10.f, 10.f });
+	al.text << "Left";
+	ac.text << "Center";
+	ar.text << "Right";
+	al.set_position_by_bounds(state.get_window_bounds(Bounds::LEFT));
+	ac.stick(al, Bounds::LEFT, Bounds::RIGHT);
+	ar.stick(ac, Bounds::LEFT, Bounds::RIGHT);
+
+	ac.bind(al);
+	ar.bind(al);
+
+	al.set_position(state.get_window_bounds(Bounds::BOTTOM) - (al.get_all_bounds(Bounds::BOTTOM) - al.get_position()));
+
+
+	Slider width, fontsize;
+	Text t;
+	t << L"Yes, if you made changes to an SFML header file and did not rebuild the SFML library, it could cause issues with your program. When you make changes to a library’s source code, you need to rebuild the library to ensure that the changes are correctly incorporated into the library’s binary files.\nIf you made changes to an SFML header file and did not rebuild the SFML library, it is possible that your program is using an outdated version of the SFML library that does not include your changes.This could cause unexpected behavior and errors in your program. To fix this issue, you should rebuild the SFML library to ensure that your changes are correctly incorporated into the library’s binary files.Once you have rebuilt the SFML library, you should also rebuild your program to ensure that it is using the updated version of the SFML library.";
+	t.set_position_by_bounds(state.get_window_bounds(Bounds::TOP), Bounds::TOP);
+
+	width.set_size({1000.f, 20.f });
+	width.set_position_by_bounds(state.get_window_bounds(Bounds::CENTER), Bounds::CENTER);
+	width.precision = 0;
+	width.set_range(0, 1000);
+
+	fontsize.set_size({ 1000.f, 20.f });
+	fontsize.set_color(sf::Color::Green);
+	fontsize.set_position_by_bounds(width.get_bounds(Bounds::BOTTOM), Bounds::TOP, 1.f, 15.f);
+	fontsize.precision = 0;
+	fontsize.set_range(1, 100);
+
 	unsigned int fps_counter = 0, fps_average = 1;
 	float fps_decay = 0.9f, fps_interval_ms = 50.f;
 
-	//int arr[2048];
-
 	PROCESS_MEMORY_COUNTERS mem_counter;
-
-	std::vector<Button> buttons;
-
+	sf::Align align = sf::Align::LEFT;
+	t.text.setStyle(sf::Text::Italic | sf::Text::Underlined);
 	while (win.isOpen())
 	{
 		while (win.pollEvent(event))
@@ -77,22 +104,38 @@ int main()
 		}
 		state.get_state();
 
-		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Space))
+		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Up))
 		{
-			buttons.push_back(Button(state.mouse_coord_position));
+			t.set_position(t.get_position() + sf::Vector2f(0.f, -1.f));
 		}
-		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Backspace))
+		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Down))
 		{
-			if (buttons.size() > 0)
-				buttons.clear();
+			t.set_position(t.get_position() + sf::Vector2f(0.f, 1.f));
+		}
+		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Left))
+		{
+			t.set_position(t.get_position() + sf::Vector2f(-1.f, 0.f));
+		}
+		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Right))
+		{
+			t.set_position(t.get_position() + sf::Vector2f(1.f, 0.f));
 		}
 
-		
+		if (al.activated)
+			align = sf::Align::LEFT;
+		if (ac.activated)
+			align = sf::Align::CENTER;
+		if (ar.activated)
+			align = sf::Align::RIGHT;
 
 		BOOL result = K32GetProcessMemoryInfo(GetCurrentProcess(), &mem_counter, sizeof(mem_counter));
 		mem_text1 << "Total memory: " << mem_counter.PagefileUsage / 1000000.f << "MB";
 		mem_text2 << "Working set: " << mem_counter.WorkingSetSize / 1000000.f << "MB";
 		objects_text << "state.objects size: " << state.objects.size();
+
+
+		t.text.align(align, width.val);
+		t.set_size(fontsize.val);
 
 		win.clear({ 0, 0, 0, 255 });
 
