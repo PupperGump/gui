@@ -556,6 +556,8 @@ public:
 
 	void set_range(float min, float max, float val = 0);
 
+	void set_size(sf::Vector2f size);
+
 	void update();
 
 	void draw();

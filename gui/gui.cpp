@@ -1901,22 +1901,46 @@ Slider::Slider(sf::Vector2f position, sf::Vector2f size, float min, float max)
 	tmax.set_padding({ knob.get_size(), knob.get_size() });
 	tval.set_padding({ knob.get_size(), knob.get_size() });
 
+	tmin << min;
+	tmax << max;
+	tval << val;
+
+	::set_vector(vec, tmin, tmax, tval, knob);
+
+	// Access violation reading location
+	//tmin.move_vector(vec, *this, 1);
+	//tmax.move_vector(vec, *this, 1);
+	//tval.move_vector(vec, *this, 1);
+	//knob.move_vector(vec, *this, 1);
+	obj_vecs.push_back(&vec);
+}
+
+void Slider::set_size(sf::Vector2f size)
+{
+	RectField::set_size(size);
+
 	tmin.set_size(get_size().y * 2);
 	tmax.set_size(get_size().y * 2);
 	tval.set_size(get_size().y * 2);
 
 	tmin.set_position_by_bounds(get_bounds(Bounds::LEFT), Bounds::RIGHT);
 	tmax.set_position_by_bounds(get_bounds(Bounds::RIGHT), Bounds::LEFT);
-
-
 	tval.set_position_by_bounds(get_bounds(Bounds::TOP), Bounds::BOTTOM);
+}
+
+void Slider::set_range(float min, float max, float val)
+{
+	this->min = min;
+	this->max = max;
+	
+	if (val > 0)
+		this->val = max / 2.f;
+	else
+		this->val = val;
 
 	tmin << min;
 	tmax << max;
-	tval << val;
-
-	::set_vector(vec, tmin, tmax, tval, knob);
-	obj_vecs.push_back(&vec);
+	tval << std::fixed << std::setprecision(precision) << val;
 }
 
 
@@ -1951,21 +1975,6 @@ void Slider::update()
 
 	knob.set_position_by_bounds(get_bounds(Bounds::LEFT) + sf::Vector2f(offset, 0.f), Bounds::CENTER);
 
-	tval << std::fixed << std::setprecision(precision) << val;
-}
-
-void Slider::set_range(float min, float max, float val)
-{
-	this->min = min;
-	this->max = max;
-	
-	if (val > 0)
-		this->val = max / 2.f;
-	else
-		this->val = val;
-
-	tmin << min;
-	tmax << max;
 	tval << std::fixed << std::setprecision(precision) << val;
 }
 
