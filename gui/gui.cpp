@@ -1314,7 +1314,7 @@ void Text::draw()
 		set_string(ss.str());
 		if (!keep_text)
 		{
-			ss.str("");
+			ss.str(L"");
 			ss.clear();
 		}
 		use_ss = 0;

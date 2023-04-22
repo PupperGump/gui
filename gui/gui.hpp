@@ -182,7 +182,7 @@ public:
 
 	sf::Vector2f get_bounded_bounds(unsigned int type, float scale_x, float scale_y, bool is_caller);
 
-	sf::Vector2f get_all_bounds(unsigned int type, float scale_x, float scale_y);
+	sf::Vector2f get_all_bounds(unsigned int type = Bounds::CENTER, float scale_x = 1.f, float scale_y = 1.f);
 
 	//virtual sf::Color get_color() = 0;
 
@@ -420,7 +420,7 @@ class Text : public Object
 {
 public:
 	sf::Text text;
-	std::stringstream ss;
+	std::wstringstream ss;
 	bool keep_text = 0;
 
 	Text(sf::Vector2f position = { 0, 0 }, unsigned int font_size = 30u, sf::Color color = sf::Color::White);
@@ -440,7 +440,7 @@ public:
 
 	// No clue why I need to return ss but I'm not arguing logic with a computer
 	template <typename T>
-	std::stringstream& operator << (T param)
+	std::wstringstream& operator << (T param)
 	{
 		use_ss = 1;
 		ss << param;
