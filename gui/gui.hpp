@@ -294,8 +294,12 @@ public:
 	void draw_objects();
 
 	// Call this if the template function doesn't work
-	void draw_objects_impl(ObjVec& object_vector);	
+	
 	void draw_objects_impl(std::vector<ObjVec*> object_vector_vector);	
+	
+	void draw_objects_impl(ObjVec& object_vector);	
+
+	void draw_objects_impl(Object& object);	
 
 	// Call this if the template function doesn't work
 	void update(ObjVec& object_vector);
