@@ -365,6 +365,45 @@ void Object::unbind()
 	view_ptr = &state->views[0];
 }
 
+sf::Vector2f Object::get_bounded_bounds(unsigned int type, float scale_x, float scale_y, bool is_caller)
+{
+	sf::Vector2f bound = get_bounds(type, scale_x, scale_y);
+	std::cout << "(" << bound.x << ", " << bound.y << ")\n";
+	if (is_caller)
+	{
+		state->caller = this;
+	}
+	else
+	{
+		if (state->caller == this)
+			return bound;
+	}
+	for (auto& obj : bound_objects)
+	{
+		switch (type)
+		{
+		case Bounds::LEFT:
+			bound.x = std::min(obj->get_bounded_bounds(type, scale_x, scale_y, 0).x, bound.x);
+			break;
+		case Bounds::RIGHT:
+			bound.x = std::max(obj->get_bounded_bounds(type, scale_x, scale_y, 0).x, bound.x);
+			break;
+		case Bounds::TOP:
+			bound.y = std::min(obj->get_bounded_bounds(type, scale_x, scale_y, 0).y, bound.y);
+			break;
+		case Bounds::BOTTOM:
+			bound.y = std::max(obj->get_bounded_bounds(type, scale_x, scale_y, 0).y, bound.y);
+			break;
+		}
+	}
+	return bound;
+}
+
+sf::Vector2f Object::get_all_bounds(unsigned int type, float scale_x, float scale_y)
+{
+	return get_bounded_bounds(type, scale_x, scale_y, 1);
+}
+
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////

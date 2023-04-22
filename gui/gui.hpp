@@ -180,6 +180,9 @@ public:
 	// Get the position of the object relative to its borders or center. Use scale_x and scale_y to multiply the offset from the center. i.e. get_bounds(Bounds::RIGHT, 0.5f, 0.5f) will get the position halfway between the center and the right edge, since it ignores scale_y by starting at the center. However, Bounds::TOP_RIGHT will shift it halfway up and halfway right.
 	virtual sf::Vector2f get_bounds(unsigned int type = Bounds::CENTER, float scale_x = 1.f, float scale_y = 1.f) = 0;
 
+	sf::Vector2f get_bounded_bounds(unsigned int type, float scale_x, float scale_y, bool is_caller);
+
+	sf::Vector2f get_all_bounds(unsigned int type, float scale_x, float scale_y);
 
 	//virtual sf::Color get_color() = 0;
 
