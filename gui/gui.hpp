@@ -106,6 +106,7 @@ class Object
 {
 public:
 	std::string name = "Object";
+	Object* address = this;
 	bool hovered = 0, mouse_down_with_no_hover = 0, mouse_clicked_with_no_hover = 0, activated = 0, toggled = 0, has_user_focus = 0;
 	bool ignore_focus = 0; // Only allow the user to interact with one object at a time. Objects will be drawn in the order they're created and updated in reverse, so the topmost object will "catch" the user and set WindowState::object_focused to 1.
 

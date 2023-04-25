@@ -119,22 +119,29 @@ void Object::move_vector(ObjVec& object_vector, size_t position)
 
 void Object::move_vector(ObjVec& object_vector, Object& next_to, int position)
 {
-	int pos1 = 0, pos2 = 0;
-	pos1 = find_vector(object_vector);
+	//int pos1 = 0, pos2 = 0;
+	//pos1 = find_vector(object_vector);
 
-	if (pos1 == -1) // Not found
-	{
-		std::cout << "move_vector: object not found\n";
-		return;
-	}
+	//if (pos1 == -1) // Not found
+	//{
+	//	std::cout << "move_vector: object not found\n";
+	//	return;
+	//}
 
+	int pos2 = 0;
+
+	//object_vector.erase(object_vector.begin() + pos1);
+	set_vector(object_vector);
+	pos2 = next_to.find_vector(object_vector);	
+	
 	if (pos2 + position > object_vector.size() - 1)
 	{
-		std::cout << "move_vector: position invalid\n";
+		std::cout << "move_vector: pos2 too large\n";
 	}
-
-	object_vector.erase(object_vector.begin() + pos1);
-	pos2 = next_to.find_vector(object_vector);
+	if (pos2 == -1)
+	{
+		std::cout << "move_vector: pos2 less than 0\n";
+	}
 	object_vector.insert(object_vector.begin() + pos2 + position, this);
 
 	//std::cout << "Pos 1: " << pos1 << "\nPos 2: " << pos2 << "\n";
