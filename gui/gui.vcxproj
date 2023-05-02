@@ -102,7 +102,7 @@
     <LibraryPath>$(ProjectDir)SFML\extlibs\libs-msvc-universal\x64;$(ProjectDir)SFML\bin\lib\Debug;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <IncludePath>$(ProjectDir);$(ProjectDir)SFML\include;$(IncludePath)</IncludePath>
+    <IncludePath>C:\MinGW;$(ProjectDir);$(ProjectDir)SFML\include;$(IncludePath)</IncludePath>
     <LibraryPath>$(ProjectDir)SFML\extlibs\libs-msvc-universal\x64;$(ProjectDir)SFML\bin\lib\Release;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -114,11 +114,11 @@
     <LibraryPath>$(ProjectDir)SFML\extlibs\libs-msvc-universal\x64;$(ProjectDir)SFML\bin\lib\Debug;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <IncludePath>$(ProjectDir);$(ProjectDir)SFML\include;$(IncludePath)</IncludePath>
+    <IncludePath>C:\MinGW;$(ProjectDir);$(ProjectDir)SFML\include;$(IncludePath)</IncludePath>
     <LibraryPath>$(ProjectDir)SFML\extlibs\libs-msvc-universal\x64;$(ProjectDir)SFML\bin\lib\Release;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">
-    <IncludePath>$(ProjectDir);$(ProjectDir)SFML\include;$(IncludePath)</IncludePath>
+    <IncludePath>C:\MinGW;$(ProjectDir);$(ProjectDir)SFML\include;$(IncludePath)</IncludePath>
     <LibraryPath>$(ProjectDir)SFML\extlibs\libs-msvc-universal\x64;$(ProjectDir)SFML\bin\lib\Release;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -149,6 +149,7 @@
       <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <EnableFiberSafeOptimizations>true</EnableFiberSafeOptimizations>
+      <EnableEnhancedInstructionSet>NotSet</EnableEnhancedInstructionSet>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -204,6 +205,7 @@
       <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <EnableFiberSafeOptimizations>true</EnableFiberSafeOptimizations>
+      <EnableEnhancedInstructionSet>NotSet</EnableEnhancedInstructionSet>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -229,6 +231,7 @@
       <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <EnableFiberSafeOptimizations>true</EnableFiberSafeOptimizations>
+      <EnableEnhancedInstructionSet>NotSet</EnableEnhancedInstructionSet>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>

@@ -7,6 +7,14 @@
 
 #define watch(x) std::cout << (#x) << " is " << (x) << "\n"
 
+#define GUI_DEBUG_LOG
+
+#ifdef GUI_DEBUG_LOG
+#define LOG(msg) std::cout << __func__ << ": " << msg << " -- " << __FILE__ << " -- " << __LINE__ << "\n";
+#else
+#define LOG(msg)
+#endif // GUI_DEBUG_LOG
+
 namespace Bounds
 {
 	enum
@@ -101,6 +109,9 @@ void set_vector(ObjVec& object_vector, Obj&... obj)
 	(obj.set_vector(object_vector), ...);
 }
 
+void show(ObjVec& object_vector);
+void hide(ObjVec& object_vector);
+
 // Base class for gui objects, can't be used before setting up the WindowState.
 class Object
 {
@@ -139,13 +150,16 @@ public:
 	// Moves the object to the given index of the given vector
 	void move_vector(ObjVec& object_vector, size_t position = 0);
 	// Inserts the object at next_to's position and offsets the index by "offset"
-	void move_vector(ObjVec& object_vector, Object& next_to, int offset = 0);
+	void move_vector(Object& next_to, int offset = 0);
 
 	// Removes the object from its current vector and pushes it to the given vector. I recommend not using this on bound objects.
 	void set_vector(ObjVec& object_vector);
 
 	// If the current object has other objects bound to it, all of those objects up the tree will be moved to the given vector to prevent draw ordering issues. When unbind_current is 0, the object will not be unbound, leading to undefined behavior.
 	void set_vector(ObjVec& object_vector, bool unbind_current);
+
+	// Sets the vector and saves it as default. Used to return to when unbound from other objects.
+	void set_vector_save(ObjVec& object_vector);
 	
 	// Returns 1 if object is bound, otherwise 0
 	bool bound();
@@ -154,6 +168,10 @@ public:
 	
 	// This will put the object at the end of the default vector. Use move_vector() if you want to change this.
 	void unbind();
+
+
+	void show(bool affect_bound = 1, bool affect_objvecs = 1, bool is_caller = 1);
+	void hide(bool affect_bound = 1, bool affect_objvecs = 1, bool is_caller = 1);
 
 	// Basically sfml wrapper functions that affects bound objects if affect_bound is true
 
@@ -197,6 +215,8 @@ protected:
 	ObjVec bound_objects; 
 	// The vector the object is currently in
 	ObjVec* current_vector;
+	// The vector used to house in-class objects
+	ObjVec* default_vector;
 	// Prevents updating/drawing the object when set to true
 	bool hide_object = 0;
 
@@ -268,11 +288,6 @@ public:
 	
 	// Gets the position of the window boundaries. Default is center.
 	sf::Vector2f get_window_bounds(unsigned int type = Bounds::CENTER, float scale_x = 1.f, float scale_y = 1.f);
-
-	void show(Object& object, bool is_caller = 1);
-	void hide(Object& object, bool is_caller = 1);
-	void show(ObjVec& object_vector);
-	void hide(ObjVec& object_vector);
 
 	// Call inside event loop
 	void get_events(sf::Event& event);

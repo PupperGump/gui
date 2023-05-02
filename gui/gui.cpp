@@ -13,13 +13,27 @@ bool set_state(WindowState& state_input)
 	// init default resources (todo: add more fonts and an enum)
 	sf::Font font;
 	if (!font.loadFromFile(fontfolder + "arial.ttf"))
-		std::cout << "Missing default font: arial.ttf\n";
+		LOG("Missing default font: arial.ttf");
 	state->fonts.push_back(font);
 
 	return 1;
 }
 
 
+void show(ObjVec& object_vector)
+{
+	for (auto& obj : object_vector)
+	{
+		obj->show();
+	}
+}
+void hide(ObjVec& object_vector)
+{
+	for (auto& obj : object_vector)
+	{
+		obj->show();
+	}
+}
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -52,6 +66,11 @@ void Object::push_vector(ObjVec& object_vector)
 {
 	object_vector.push_back(this);
 }
+void Object::set_vector_save(ObjVec& object_vector)
+{
+	push_vector(object_vector);
+	default_vector = &object_vector;
+}
 
 int Object::find_vector(ObjVec& object_vector)
 {
@@ -82,23 +101,21 @@ void Object::set_vector(ObjVec& object_vector)
 	remove_vector(*current_vector);
 	push_vector(object_vector);
 	current_vector = &object_vector;
+
+	for (auto& obj : bound_objects)
+	{
+		obj->bind(*this);
+	}
 }
 void Object::set_vector(ObjVec& object_vector, bool unbind_current)
 {
 	// Since everything is paired up nicely when bound together, I can simply iterate over the vector and stop when I find an unbound object (end of tree)
-	ObjVec& from_vec = *current_vector;
-	int pos = find_vector(from_vec);
-	if (pos == -1)
-		return;
-	if (unbind_current)
-		unbind();
-	while (pos < from_vec.size() && (from_vec[pos]->bound() || from_vec[pos] == this))
+	
+	// Exit condition: No more bound objects for current object, move current
+	if (bound_to->bound_objects.size() == 0)
 	{
-		Object& obj = *from_vec[pos];
-		std::cout << obj.bound() << "\n";
-		obj.remove_vector(from_vec);
-		obj.push_vector(object_vector);
-		obj.current_vector = &object_vector;
+		set_vector(object_vector);
+		return;
 	}
 }	
 
@@ -111,40 +128,42 @@ void Object::move_vector(ObjVec& object_vector, size_t position)
 
 	if (pos + position > object_vector.size() - 1)
 	{
-		std::cout << "move_vector: position invalid\n";
+		LOG("position invalid");
 	}
 	object_vector.erase(object_vector.begin() + pos);
 	object_vector.insert(object_vector.begin() + position, this);
 }
 
-void Object::move_vector(ObjVec& object_vector, Object& next_to, int position)
+void Object::move_vector(Object& next_to, int position)
 {
-	//int pos1 = 0, pos2 = 0;
-	//pos1 = find_vector(object_vector);
-
-	//if (pos1 == -1) // Not found
-	//{
-	//	std::cout << "move_vector: object not found\n";
-	//	return;
-	//}
-
-	int pos2 = 0;
-
-	//object_vector.erase(object_vector.begin() + pos1);
-	set_vector(object_vector);
-	pos2 = next_to.find_vector(object_vector);	
-	
-	if (pos2 + position > object_vector.size() - 1)
+	if (current_vector != next_to.current_vector)
 	{
-		std::cout << "move_vector: pos2 too large\n";
+		LOG("Changing current_vector");
+		set_vector(*next_to.current_vector);
 	}
+
+	int pos1 = find_vector(*current_vector);
+	if (pos1 == -1)
+	{
+		LOG("Find failed");
+		return;
+	}
+	if (!remove_vector(*current_vector))
+	{
+		LOG("Remove failed");
+		return;
+	}
+
+	int pos2 = next_to.find_vector(*next_to.current_vector);
 	if (pos2 == -1)
 	{
-		std::cout << "move_vector: pos2 less than 0\n";
+		LOG("Find 2 failed");
+		return;
 	}
-	object_vector.insert(object_vector.begin() + pos2 + position, this);
+	if (pos2 >= next_to.current_vector->size())
+		LOG("pos2 past end");
 
-	//std::cout << "Pos 1: " << pos1 << "\nPos 2: " << pos2 << "\n";
+	next_to.current_vector->insert(next_to.current_vector->begin() + pos2 + position, this);
 }
 
 
@@ -320,7 +339,7 @@ void Object::bind(Object& other)
 	{
 		// If the other object is already bound to the current object, escape
 		//other.bound_to = NULL;
-		std::cout << "bind: other object already bound to this\n";
+		LOG("bind: other object already bound to this");
 		return;
 	}
 	if (bound())
@@ -335,7 +354,7 @@ void Object::bind(Object& other)
 	// Probably overkill
 	if (last == this)
 	{
-		std::cout << "bind: current object found in bound_to->bound_objects\n";
+		LOG("bind: current object found in bound_to->bound_objects\n");
 		return;
 	}
 
@@ -345,17 +364,14 @@ void Object::bind(Object& other)
 		set_vector(*bound_to->current_vector);
 	}
 
-	// Move right after "last" (pos -1 means left of, 0 means right of)
-	if (last != NULL)
+	// Move right after "last" (pos 0 means left of, 1 means right of)
+	if (last == NULL)
 	{
-		//std::cout << "last is not NULL\n";
+		//LOG("Last was null");
+		set_vector(*other.current_vector);
 	}
 	else
-	{
-		last = &other;
-		//std::cout << "last is NULL\n";
-	}
-	move_vector(*current_vector, *last, 1);
+		move_vector(*last, 1);
 	// Share views
 	view_ptr = bound_to->view_ptr;
 }
@@ -367,7 +383,20 @@ void Object::unbind()
 		return;	
 	
 	remove_vector(bound_to->bound_objects);
-	set_vector(state->objects);
+
+	// Setting the vector to default interferes with a class's obj_vecs. Although the binding placement is useful for drawing and updating without issue, these need to be returned to the starting class's obj_vec in the proper order. So I'm making a default pointer for this.
+	
+	if (default_vector == NULL)
+	{
+		if (obj_vecs.size() == 0)
+			set_vector(state->objects);
+		else if (!bound())
+			set_vector(*obj_vecs[0]);
+	}
+	else
+		set_vector(*default_vector);
+
+
 	bound_to = NULL;
 	view_ptr = &state->views[0];
 }
@@ -411,7 +440,67 @@ sf::Vector2f Object::get_all_bounds(unsigned int type, float scale_x, float scal
 	return get_bounded_bounds(type, scale_x, scale_y, 1);
 }
 
+// These use the recursive implementation for bound objects
+void Object::show(bool affect_bound, bool affect_objvecs, bool is_caller)
+{
+	if (is_caller)
+	{
+		state->caller = this;
+	}
+	else
+	{
+		if (state->caller == this)
+			return;
+	}
+	if (affect_bound)
+	{
+		for (auto& obj : bound_objects)
+		{
+			hide_object = 0;
+		}
+	}
 
+	if (affect_objvecs)
+	{
+		for (auto& objvec : obj_vecs)
+		{
+			::show(*objvec);
+		}
+	}
+	hide_object = 0;
+}
+
+void Object::hide(bool affect_bound, bool affect_objvecs, bool is_caller)
+{
+	//object.hide_object = 1;
+
+	if (is_caller)
+	{
+		state->caller = this;
+	}
+	else
+	{
+		if (state->caller == this)
+			return;
+	}
+	if (affect_bound)
+	{
+		for (auto& obj : bound_objects)
+		{
+
+			hide_object = 1;
+		}
+	}
+
+	if (affect_objvecs)
+	{
+		for (auto& objvec : obj_vecs)
+		{
+			::hide(*objvec);
+		}
+	}
+	hide_object = 1;
+}
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // WindowState
@@ -432,71 +521,6 @@ void WindowState::set_window(sf::RenderWindow& window)
 {
 	this->window = &window;
 	views.push_back(window.getDefaultView());
-}
-
-// These use the recursive implementation for bound objects
-void WindowState::show(Object& object, bool is_caller)
-{
-	if (is_caller)
-	{
-		state->caller = &object;
-	}
-	else
-	{
-		if (state->caller == &object)
-			return;
-	}
-	for (auto& obj : object.bound_objects)
-	{
-		object.hide_object = 0;
-	}
-
-	for (auto& objvec : object.obj_vecs)
-	{
-		show(*objvec);
-	}
-	object.hide_object = 0;
-}
-
-void WindowState::hide(Object& object, bool is_caller)
-{
-	//object.hide_object = 1;
-
-	if (is_caller)
-	{
-		state->caller = &object;
-	}
-	else
-	{
-		if (state->caller == &object)
-			return;
-	}
-	for (auto& obj : object.bound_objects)
-	{
-		object.hide_object = 1;
-	}
-
-	for (auto& objvec : object.obj_vecs)
-	{
-		hide(*objvec);
-	}
-
-	object.hide_object = 1;
-}
-
-void WindowState::show(ObjVec& object_vector)
-{
-	for (auto& obj : object_vector)
-	{
-		show(*obj);
-	}
-}
-void WindowState::hide(ObjVec& object_vector)
-{
-	for (auto& obj : object_vector)
-	{
-		hide(*obj);
-	}
 }
 
 // Call inside event loop
@@ -665,7 +689,7 @@ void WindowState::draw_objects_impl(std::vector<ObjVec*> vec)
 	{
 		if (typeid(ObjVec) != typeid(*vec[i]))
 		{
-			std::cout << "ERROR: draw_objects(): item " << i << " not of type ObjVec\n";
+			LOG("ERROR: draw_objects(): item " << i << " not of type ObjVec");
 			vec.erase(vec.begin() + i);
 			i--;
 			continue;
@@ -1936,6 +1960,7 @@ Slider::Slider(sf::Vector2f position, sf::Vector2f size, float min, float max)
 	//tval.move_vector(vec, *this, 1);
 	//knob.move_vector(vec, *this, 1);
 	obj_vecs.push_back(&vec);
+
 }
 
 void Slider::set_size(sf::Vector2f size)

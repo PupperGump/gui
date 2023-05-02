@@ -60,10 +60,19 @@ int main()
 	ar.stick(ac, Bounds::LEFT, Bounds::RIGHT);
 
 	ac.bind(al);
+	ac.unbind();
 	ar.bind(al);
 
-	al.set_position(state.get_window_bounds(Bounds::BOTTOM) - (al.get_all_bounds(Bounds::BOTTOM) - al.get_position()));
+	//ac.hide(0, 0);
+	//ar.hide(0, 0);
+	//al.set_position(state.get_window_bounds(Bounds::BOTTOM) - (al.get_all_bounds(Bounds::BOTTOM) - al.get_position()));
+	al.set_position_by_bounds(state.get_window_bounds(Bounds::BOTTOM), Bounds::BOTTOM);
 
+	sf::Vector2f left, center, right;
+
+	left = al.get_bounds(Bounds::BOTTOM);
+	center = ac.get_bounds(Bounds::BOTTOM);
+	right = ar.get_bounds(Bounds::BOTTOM);
 
 	Slider width, fontsize;
 	Text t;
