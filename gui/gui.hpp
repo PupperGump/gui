@@ -108,7 +108,7 @@ class Object
 public:
 	std::string name = "Object";
 	Object* address = this;
-	bool hovered = 0, mouse_down_with_no_hover = 0, mouse_clicked_with_no_hover = 0, activated = 0, toggled = 0, has_user_focus = 0;
+	bool hovered = 0, mouse_down_with_no_hover = 0, activated = 0, has_user_focus = 0;
 	bool ignore_focus = 0; // Only allow the user to interact with one object at a time. Objects will be drawn in the order they're created and updated in reverse, so the topmost object will "catch" the user and set WindowState::object_focused to 1.
 
 	// Information used to reposition in case of size changes (such as text alignment)
@@ -384,6 +384,7 @@ protected:
 class Button : public RectField
 {
 public:
+	bool toggled = 0;
 
 	Button(sf::Vector2f position = { 0, 0 }, sf::Vector2f size = { 100, 100 }, sf::Color color = sf::Color::Blue);
 
@@ -430,7 +431,7 @@ protected:
 };
 
 
-// Text ouptut object. All this does is provide the convenience of bounds and perhaps highlighting in the future. You can supply the font to the class with sf::Font::loadFromFile(), but it will be Arial by default.
+// Text ouptut object. All this does is provide the convenience of bounds and perhaps highlighting in the future. You can supply the font to the class with sf::Font::loadFromFile(), but it will be Arial by default. (Update: the WindowState has a font vector)
 class Text : public Object
 {
 public:
@@ -453,7 +454,6 @@ public:
 
 	void set_position_by_bounds(sf::Vector2f position, unsigned int type = Bounds::TOP | Bounds::LEFT, float scale_x = 1.f, float scale_y = 1.f);
 
-	// No clue why I need to return ss but I'm not arguing logic with a computer
 	template <typename T>
 	std::wstringstream& operator << (T param)
 	{

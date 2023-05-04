@@ -62,9 +62,6 @@ int main()
 	ac.bind(al);
 	ar.bind(ac);
 
-	ac.unbind();
-	ar.unbind();
-
 	//ac.hide(0, 0);
 	//ar.hide(0, 0);
 	//al.set_position(state.get_window_bounds(Bounds::BOTTOM) - (al.get_all_bounds(Bounds::BOTTOM) - al.get_position()));

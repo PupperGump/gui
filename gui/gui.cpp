@@ -13,7 +13,7 @@ bool set_state(WindowState& state_input)
 	// init default resources (todo: add more fonts and an enum)
 	sf::Font font;
 	if (!font.loadFromFile(fontfolder + "arial.ttf"))
-		LOG("Missing default font: arial.ttf");
+		LOG("Missing default font in " << fontfolder + "arial.ttf");
 	state->fonts.push_back(font);
 
 	return 1;
@@ -676,6 +676,11 @@ void WindowState::update(Object& object)
 {
 	// Don't update objects that are hidden or nonexistent
 
+	for (auto& obj : object.obj_vec)
+	{
+		update(*obj);
+	}
+
 	if (object.hide_object)
 	{
 		// If object is hidden it shouldn't keep focus
@@ -942,7 +947,7 @@ void RectField::update()
 	if (hovered && state->mouse_clicked && !mouse_down_with_no_hover)
 	{
 		activated = 1;
-		toggled = !toggled;
+		//toggled = !toggled;
 	}
 	else
 	{
@@ -1216,7 +1221,7 @@ void CircleField::update()
 	if (hovered && state->mouse_clicked && !mouse_down_with_no_hover)
 	{
 		activated = 1;
-		toggled = !toggled;
+		//toggled = !toggled;
 	}
 	else
 	{
@@ -1978,7 +1983,6 @@ Slider::Slider(sf::Vector2f position, sf::Vector2f size, float min, float max)
 	set_position(position);
 	set_size(size);
 
-	knob.set_size(get_size().y * 2);
 	knob.bind(*this);
 	knob.catch_focus = 1;
 	//knob.ignore_focus = 1;
@@ -1987,6 +1991,7 @@ Slider::Slider(sf::Vector2f position, sf::Vector2f size, float min, float max)
 
 	this->min = min;
 	this->max = max;
+	//this->val = (max - min) / 2.f;
 
 	tmin.bind(*this);
 	tmax.bind(*this);
@@ -1996,18 +2001,13 @@ Slider::Slider(sf::Vector2f position, sf::Vector2f size, float min, float max)
 	tmax.set_padding({ knob.get_size(), knob.get_size() });
 	tval.set_padding({ knob.get_size(), knob.get_size() });
 
-	tmin << min;
-	tmax << max;
-	tval << val;
+	//tmin << min;
+	//tmax << max;
+	//tval << val;
 
 	::set_vector(obj_vec, tmin, tmax, tval, knob);
 
-	// Access violation reading location
-	//tmin.move_vector(vec, *this, 1);
-	//tmax.move_vector(vec, *this, 1);
-	//tval.move_vector(vec, *this, 1);
-	//knob.move_vector(vec, *this, 1);
-
+	update();
 }
 
 void Slider::set_size(sf::Vector2f size)
@@ -2017,6 +2017,8 @@ void Slider::set_size(sf::Vector2f size)
 	tmin.set_size(get_size().y * 2);
 	tmax.set_size(get_size().y * 2);
 	tval.set_size(get_size().y * 2);
+
+	knob.set_size(get_size().y * 2);
 
 	tmin.set_position_by_bounds(get_bounds(Bounds::LEFT), Bounds::RIGHT);
 	tmax.set_position_by_bounds(get_bounds(Bounds::RIGHT), Bounds::LEFT);
@@ -2053,6 +2055,10 @@ void Slider::update()
 	// A problem I'm encountering is being unable to use objects that are part of the class as a way to determine focus since it first requires the object to be updated, which requires some sort of focus. Basically, I need a way to make this CircleField update with the slider. One thing I can do is create a new vector as part of the class and set everything to it, then update these manually. This will basically mean that when slider is updated, everything else gets updated.
 	// Oops, this still doesn't solve the issue because it's all hinged on whether the Slider can update. 
 	// catch_focus fixes this issue but it might cause other problems with updating overlayed objects
+
+	// Here in the future I fixed all the update/rendering issues but one: If you're using one slider, and your cursor hovers over another, the other slider will "steal" focus if it is updated first (declared later). The idea with the knob was that it would allow the Rectfield to be updated, which would then grab its focus. I need to make it so that everyone knows that user focus is grabbed.
+
+	// Also in the constructor, using the ss on the larger values seems to cause a weird issue where the text will remain rendered at the end of the actual text. It's updated every frame but the string isn't modified, and I have no clue why it's green since it doesn't inherit the color of the rectfield body. I'm starting to think that some vertices are out of order or text_props isn't working right.
 	if (state->mouse_down)
 		has_user_focus = 1;
 	if (state->mouse_up)
