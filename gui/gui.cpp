@@ -560,7 +560,7 @@ void WindowState::get_events(sf::Event& event)
 		switch (event.key.code)
 		{
 		case sf::Keyboard::Delete:
-			keyboard_input += (unsigned int)127;
+			//keyboard_input += (unsigned int)127;
 			break;
 		case sf::Keyboard::Left:
 			key.left = 1;
@@ -577,7 +577,7 @@ void WindowState::get_events(sf::Event& event)
 		}
 		break;
 	case sf::Event::TextEntered:
-		keyboard_input += event.text.unicode;
+		//keyboard_input += event.text.unicode;
 		break;
 	}
 }

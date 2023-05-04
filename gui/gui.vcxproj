@@ -99,27 +99,27 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <IncludePath>$(ProjectDir);$(ProjectDir)SFML\include;$(IncludePath)</IncludePath>
-    <LibraryPath>$(ProjectDir)SFML\extlibs\libs-msvc-universal\x64;$(ProjectDir)SFML\bin\lib\Debug;$(LibraryPath)</LibraryPath>
+    <LibraryPath>$(ProjectDir)SFML\extlibs\libs-msvc-universal\x64;$(ProjectDir)SFML\build\lib\Debug;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <IncludePath>C:\MinGW;$(ProjectDir);$(ProjectDir)SFML\include;$(IncludePath)</IncludePath>
-    <LibraryPath>$(ProjectDir)SFML\extlibs\libs-msvc-universal\x64;$(ProjectDir)SFML\bin\lib\Release;$(LibraryPath)</LibraryPath>
+    <LibraryPath>$(ProjectDir)SFML\extlibs\libs-msvc-universal\x64;$(ProjectDir)SFML\build\lib\Release;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <IncludePath>$(ProjectDir);$(ProjectDir)SFML\include;$(IncludePath)</IncludePath>
-    <LibraryPath>$(ProjectDir)SFML\extlibs\libs-msvc-universal\x64;$(ProjectDir)SFML\bin\lib\Debug;$(LibraryPath)</LibraryPath>
+    <LibraryPath>$(ProjectDir)SFML\extlibs\libs-msvc-universal\x64;$(ProjectDir)SFML\build\lib\Debug;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">
     <IncludePath>$(ProjectDir);$(ProjectDir)SFML\include;$(IncludePath)</IncludePath>
-    <LibraryPath>$(ProjectDir)SFML\extlibs\libs-msvc-universal\x64;$(ProjectDir)SFML\bin\lib\Debug;$(LibraryPath)</LibraryPath>
+    <LibraryPath>$(ProjectDir)SFML\extlibs\libs-msvc-universal\x64;$(ProjectDir)SFML\build\lib\Debug;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <IncludePath>C:\MinGW;$(ProjectDir);$(ProjectDir)SFML\include;$(IncludePath)</IncludePath>
-    <LibraryPath>$(ProjectDir)SFML\extlibs\libs-msvc-universal\x64;$(ProjectDir)SFML\bin\lib\Release;$(LibraryPath)</LibraryPath>
+    <LibraryPath>$(ProjectDir)SFML\extlibs\libs-msvc-universal\x64;$(ProjectDir)SFML\build\lib\Release;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">
     <IncludePath>C:\MinGW;$(ProjectDir);$(ProjectDir)SFML\include;$(IncludePath)</IncludePath>
-    <LibraryPath>$(ProjectDir)SFML\extlibs\libs-msvc-universal\x64;$(ProjectDir)SFML\bin\lib\Release;$(LibraryPath)</LibraryPath>
+    <LibraryPath>$(ProjectDir)SFML\extlibs\libs-msvc-universal\x64;$(ProjectDir)SFML\build\lib\Release;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
