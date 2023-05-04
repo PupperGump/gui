@@ -66,11 +66,6 @@ void Object::push_vector(ObjVec& object_vector)
 {
 	object_vector.push_back(this);
 }
-void Object::set_vector_save(ObjVec& object_vector)
-{
-	push_vector(object_vector);
-	default_vector = &object_vector;
-}
 
 int Object::find_vector(ObjVec& object_vector)
 {
@@ -102,10 +97,10 @@ void Object::set_vector(ObjVec& object_vector)
 	push_vector(object_vector);
 	current_vector = &object_vector;
 
-	for (auto& obj : bound_objects)
-	{
-		obj->bind(*this);
-	}
+	//for (auto& obj : bound_objects)
+	//{
+	//	obj->bind(*this);
+	//}
 }
 void Object::set_vector(ObjVec& object_vector, bool unbind_current)
 {
@@ -339,7 +334,12 @@ void Object::bind(Object& other)
 	{
 		// If the other object is already bound to the current object, escape
 		//other.bound_to = NULL;
-		LOG("bind: other object already bound to this");
+		LOG("other object already bound to this");
+		return;
+	}
+	if (parent != NULL && parent != &other)
+	{
+		LOG("parent is not correct, returning");
 		return;
 	}
 	if (bound())
@@ -380,22 +380,22 @@ void Object::bind(Object& other)
 void Object::unbind()
 {
 	if (bound_to == NULL)
-		return;	
+		return;
 	
 	remove_vector(bound_to->bound_objects);
 
 	// Setting the vector to default interferes with a class's obj_vecs. Although the binding placement is useful for drawing and updating without issue, these need to be returned to the starting class's obj_vec in the proper order. So I'm making a default pointer for this.
-	
-	if (default_vector == NULL)
+
+	// Check if it belongs to an object (bound()?) and move it there, otherwise default vec
+
+	if (parent == NULL)
 	{
-		if (obj_vecs.size() == 0)
-			set_vector(state->objects);
-		else if (!bound())
-			set_vector(*obj_vecs[0]);
+		set_vector(state->objects);
 	}
 	else
-		set_vector(*default_vector);
-
+	{
+		set_vector(parent->obj_vec);
+	}
 
 	bound_to = NULL;
 	view_ptr = &state->views[0];
@@ -462,10 +462,9 @@ void Object::show(bool affect_bound, bool affect_objvecs, bool is_caller)
 
 	if (affect_objvecs)
 	{
-		for (auto& objvec : obj_vecs)
-		{
-			::show(*objvec);
-		}
+
+		::show(obj_vec);
+
 	}
 	hide_object = 0;
 }
@@ -494,10 +493,7 @@ void Object::hide(bool affect_bound, bool affect_objvecs, bool is_caller)
 
 	if (affect_objvecs)
 	{
-		for (auto& objvec : obj_vecs)
-		{
-			::hide(*objvec);
-		}
+		::hide(obj_vec);
 	}
 	hide_object = 1;
 }
@@ -621,55 +617,109 @@ void WindowState::update(ObjVec& object_vector)
 	// Loop backwards through the object vector to "depth-check" object_vector if object.ignore_focus is 0
 	for (int i = object_vector.size() - 1; i >= 0; i--)
 	{
-		//std::cout << object_vector[i]->name << "\n";
-		// Don't update objects that are hidden or nonexistent
-		if (object_vector[i] == NULL)
-			continue;
-		if (object_vector[i]->hide_object)
+		update(*object_vector[i]);
+		////std::cout << object_vector[i]->name << "\n";
+		//// Don't update objects that are hidden or nonexistent
+		//if (object_vector[i] == NULL)
+		//	continue;
+		//if (object_vector[i]->hide_object)
+		//{
+		//	// If object is hidden it shouldn't keep focus
+		//	object_vector[i]->has_user_focus = 0;
+		//	continue;
+		//}
+
+		////object_vector[i]->locked_focus = 0;		
+
+		//// Figure out if the mouse is hovering over the object and whether to set bound focus
+		//object_vector[i]->get_hovered();
+
+		//// Catch and pass focus, used for things like the knob on the slider
+		//if (object_vector[i]->hovered && object_vector[i]->catch_focus)
+		//{
+		//	if (object_vector[i]->bound())
+		//	{
+		//		object_vector[i]->bound_to->has_user_focus = 1;
+		//	}
+		//}
+		//
+		//// Check user focus
+		//if (object_vector[i]->gain_focus_condition())
+		//	object_vector[i]->has_user_focus = 1;
+		//if (object_vector[i]->lose_focus_condition())
+		//	object_vector[i]->has_user_focus = 0;
+
+		//// Update the object every frame if you don't care about focus
+		//if (object_vector[i]->ignore_focus)
+		//{
+		//	object_vector[i]->update();
+		//	continue;
+		//}
+
+		//// If there is no object currently in focus, update. Lock focus if the current object doesn't "pass" it over to another object
+		//if (!object_focused)
+		//{
+		//	if (object_vector[i]->hovered || object_vector[i]->has_user_focus)
+		//	{
+		//		object_vector[i]->update();
+		//		if (!object_vector[i]->catch_focus)
+		//		{
+		//			object_focused = 1;
+		//			//object_vector[i]->locked_focus = 1;
+		//		}
+		//	}
+		//}
+	}
+}
+
+void WindowState::update(Object& object)
+{
+	// Don't update objects that are hidden or nonexistent
+
+	if (object.hide_object)
+	{
+		// If object is hidden it shouldn't keep focus
+		object.has_user_focus = 0;
+		return;
+	}
+
+	//object.locked_focus = 0;		
+
+	// Figure out if the mouse is hovering over the object and whether to set bound focus
+	object.get_hovered();
+
+	// Catch and pass focus, used for things like the knob on the slider
+	if (object.hovered && object.catch_focus)
+	{
+		if (object.bound())
 		{
-			// If object is hidden it shouldn't keep focus
-			object_vector[i]->has_user_focus = 0;
-			continue;
+			object.bound_to->has_user_focus = 1;
 		}
+	}
 
-		//object_vector[i]->locked_focus = 0;		
+	// Check user focus
+	if (object.gain_focus_condition())
+		object.has_user_focus = 1;
+	if (object.lose_focus_condition())
+		object.has_user_focus = 0;
 
-		// Figure out if the mouse is hovering over the object and whether to set bound focus
-		object_vector[i]->get_hovered();
+	// Update the object every frame if you don't care about focus
+	if (object.ignore_focus)
+	{
+		object.update();
+		return;
+	}
 
-		// Catch and pass focus, used for things like the knob on the slider
-		if (object_vector[i]->hovered && object_vector[i]->catch_focus)
+	// If there is no object currently in focus, update. Lock focus if the current object doesn't "pass" it over to another object
+	if (!object_focused)
+	{
+		if (object.hovered || object.has_user_focus)
 		{
-			if (object_vector[i]->bound())
+			object.update();
+			if (!object.catch_focus)
 			{
-				object_vector[i]->bound_to->has_user_focus = 1;
-			}
-		}
-		
-		// Check user focus
-		if (object_vector[i]->gain_focus_condition())
-			object_vector[i]->has_user_focus = 1;
-		if (object_vector[i]->lose_focus_condition())
-			object_vector[i]->has_user_focus = 0;
-
-		// Update the object every frame if you don't care about focus
-		if (object_vector[i]->ignore_focus)
-		{
-			object_vector[i]->update();
-			continue;
-		}
-
-		// If there is no object currently in focus, update. Lock focus if the current object doesn't "pass" it over to another object
-		if (!object_focused)
-		{
-			if (object_vector[i]->hovered || object_vector[i]->has_user_focus)
-			{
-				object_vector[i]->update();
-				if (!object_vector[i]->catch_focus)
-				{
-					object_focused = 1;
-					//object_vector[i]->locked_focus = 1;
-				}
+				object_focused = 1;
+				//object.locked_focus = 1;
 			}
 		}
 	}
@@ -702,10 +752,7 @@ void WindowState::draw_objects_impl(std::vector<ObjVec*> vec)
 	{
 		for (auto& obj : *vec[i])
 		{
-			for (auto& v : obj->obj_vecs)
-			{
-				update(*v);
-			}
+			update(obj->obj_vec);
 		}
 		update(*vec[i]);
 	}
@@ -720,10 +767,7 @@ void WindowState::draw_objects_impl(std::vector<ObjVec*> vec)
 		
 		for (auto& obj : *vec[i])
 		{
-			for (auto& v : obj->obj_vecs)
-			{
-				draw_objects_impl(*v);
-			}
+			draw_objects_impl(obj->obj_vec);
 		}
 	}
 }
@@ -765,6 +809,11 @@ void WindowState::draw_objects_impl(Object& object)
 		window->setView(views[0]);
 	}
 	object.draw();
+
+	for (auto& obj : object.obj_vec)
+	{
+		draw_objects_impl(*obj);
+	}
 }
 
 sf::Vector2f WindowState::get_window_bounds(unsigned int type, float scale_x, float scale_y)
@@ -1382,9 +1431,8 @@ TextButton::TextButton(sf::Vector2f position, sf::Vector2f size, sf::Color color
 
 	text.set_position_by_bounds(get_bounds(Bounds::CENTER), Bounds::CENTER);
 	text.bind(*this);
-
-	::set_vector(vec, text);
-	obj_vecs.push_back(&vec);
+	text.set_parent(*this);
+	::set_vector(obj_vec, text);
 }
 
 void TextButton::set_size_impl(sf::Vector2f size)
@@ -1493,7 +1541,7 @@ TextInput::TextInput(sf::Vector2f position, sf::Vector2f size)
 	text[0].ignore_focus = 1;
 	
 	text[0].bind(*this);
-	set_alignment(Align::LEFT);
+	//set_alignment(Align::LEFT);
 
 	keyboard_cursor.setSize({ 3.f, (float)text[0].text.getCharacterSize() });
 	keyboard_cursor.setFillColor(sf::Color::Yellow);
@@ -1508,22 +1556,22 @@ TextInput::TextInput(sf::Vector2f position, sf::Vector2f size)
 void TextInput::set_alignment(unsigned int alignment)
 {
 	//std::cout << "set alignment\n";
-	this->alignment = alignment;
-	if (alignment == Align::LEFT)
-	{
-		from = Bounds::TOP_LEFT;
-		to = Bounds::BOTTOM_LEFT;
-	}
-	if (alignment == Align::CENTER)
-	{
-		from = Bounds::TOP;
-		to = Bounds::BOTTOM;
-	}
-	if (alignment == Align::RIGHT)
-	{
-		from = Bounds::TOP_RIGHT;
-		to = Bounds::BOTTOM_RIGHT;
-	}
+	//this->alignment = alignment;
+	//if (alignment == Align::LEFT)
+	//{
+	//	from = Bounds::TOP_LEFT;
+	//	to = Bounds::BOTTOM_LEFT;
+	//}
+	//if (alignment == Align::CENTER)
+	//{
+	//	from = Bounds::TOP;
+	//	to = Bounds::BOTTOM;
+	//}
+	//if (alignment == Align::RIGHT)
+	//{
+	//	from = Bounds::TOP_RIGHT;
+	//	to = Bounds::BOTTOM_RIGHT;
+	//}
 
 	text[0].set_position_by_bounds(get_bounds(from), from);
 
@@ -1816,7 +1864,7 @@ void TextInput::display_text()
 	}
 
 	// Fixes an issue where, after removing text, the most recently added text will be shown over another line. No performance impact found.
-	set_alignment(alignment);
+	//set_alignment(alignment);
 	
 }
 
@@ -1952,14 +2000,13 @@ Slider::Slider(sf::Vector2f position, sf::Vector2f size, float min, float max)
 	tmax << max;
 	tval << val;
 
-	::set_vector(vec, tmin, tmax, tval, knob);
+	::set_vector(obj_vec, tmin, tmax, tval, knob);
 
 	// Access violation reading location
 	//tmin.move_vector(vec, *this, 1);
 	//tmax.move_vector(vec, *this, 1);
 	//tval.move_vector(vec, *this, 1);
 	//knob.move_vector(vec, *this, 1);
-	obj_vecs.push_back(&vec);
 
 }
 

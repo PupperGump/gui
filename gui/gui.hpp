@@ -31,16 +31,6 @@ namespace Bounds
 	};
 }; // namespace Bounds
 
-namespace Align
-{
-	enum
-	{
-		LEFT,
-		RIGHT,
-		CENTER 
-	};
-}; // namespace Align
-
 // https://en.wikipedia.org/wiki/List_of_Unicode_characters#Control_codes
 namespace Ctrl
 {
@@ -140,7 +130,7 @@ public:
 	sf::View* view_ptr;
 
 	// Some objects may need ObjVecs paired with them for convenience, without the inconvenience of binding.
-	std::vector<ObjVec*> obj_vecs;
+	ObjVec obj_vec;
 
 
 	Object();
@@ -157,9 +147,6 @@ public:
 
 	// If the current object has other objects bound to it, all of those objects up the tree will be moved to the given vector to prevent draw ordering issues. When unbind_current is 0, the object will not be unbound, leading to undefined behavior.
 	void set_vector(ObjVec& object_vector, bool unbind_current);
-
-	// Sets the vector and saves it as default. Used to return to when unbound from other objects.
-	void set_vector_save(ObjVec& object_vector);
 	
 	// Returns 1 if object is bound, otherwise 0
 	bool bound();
@@ -205,24 +192,30 @@ public:
 
 	//virtual sf::Color get_color() = 0;
 
+	// Defaults this object to other.obj_vec
+	void set_parent(Object& other) { parent = &other; }
+	// Removes parent
+	void remove_parent() { parent = NULL; }
 
 protected:
 	friend class WindowState;
 
 	// What the current object is bound to
 	Object* bound_to = NULL; 
+	// Default object to return to, will be rendered and updated with reference to this object
+	Object* parent = NULL;
 	// The objects that are bound to the current object
 	ObjVec bound_objects; 
 	// The vector the object is currently in
 	ObjVec* current_vector;
-	// The vector used to house in-class objects
-	ObjVec* default_vector;
 	// Prevents updating/drawing the object when set to true
 	bool hide_object = 0;
 
 	void push_vector(ObjVec& object_vector);
-	int find_vector(ObjVec& object);
+	int find_vector(ObjVec& object_vector);
 	bool remove_vector(ObjVec& object_vector);
+
+
 
 	virtual void get_hovered() {}
 	virtual void update() {}
@@ -319,6 +312,8 @@ public:
 
 	// Call this if the template function doesn't work
 	void update(ObjVec& object_vector);
+
+	void update(Object& object);
 protected:
 };
 
@@ -522,7 +517,7 @@ class TextInput : public RectView
 public:
 	bool use_line_wrap = 1, box_full = 0;
 	int line_limit = -1;
-	unsigned int alignment = Align::LEFT;
+	//unsigned int alignment = Align::LEFT;
 
 	size_t cursor_position = 0, line_in_focus = 0;
 	sf::RectangleShape keyboard_cursor;

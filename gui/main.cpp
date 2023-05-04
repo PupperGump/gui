@@ -60,8 +60,10 @@ int main()
 	ar.stick(ac, Bounds::LEFT, Bounds::RIGHT);
 
 	ac.bind(al);
+	ar.bind(ac);
+
 	ac.unbind();
-	ar.bind(al);
+	ar.unbind();
 
 	//ac.hide(0, 0);
 	//ar.hide(0, 0);
