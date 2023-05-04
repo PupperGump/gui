@@ -97,7 +97,7 @@ int main()
 
 	PROCESS_MEMORY_COUNTERS mem_counter;
 	sf::Align align = sf::Align::LEFT;
-	t.text.setStyle(sf::Text::Italic | sf::Text::Underlined);
+	t.text.setStyle(sf::Text::Italic | sf::Text::StrikeThrough);
 	while (win.isOpen())
 	{
 		while (win.pollEvent(event))
