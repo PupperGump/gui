@@ -1,3 +1,3 @@
 [submodule "SFML"]
-	path = gui/SFML
+	path = SFML
 	url = https://github.com/PupperGump/SFML.git

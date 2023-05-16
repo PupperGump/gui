@@ -1,3 +1,4 @@
+project(sfml_lib)
 cmake_minimum_required(VERSION 3.21)
 
 include(FetchContent)
@@ -6,11 +7,11 @@ FetchContent_Declare(SFML
     GIT_TAG puppergump_master)
 FetchContent_MakeAvailable(SFML)
 
-add_executable(${PROJECT_NAME} main.cpp gui.cpp gui.hpp ${SFML_SOURCES})
+add_library(${PROJECT_NAME} ${SFML_SOURCES})
 
-target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_SOURCE_DIR}/gui/SFML/include)
+target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_SOURCE_DIR}/SFML/include)
 
-target_link_libraries(${PROJECT_NAME} PRIVATE sfml-graphics sfml-window)
+target_link_libraries(${PROJECT_NAME} PRIVATE sfml-graphics sfml-window sfml-system)
 
 if (WIN32 AND BUILD_SHARED_LIBS)
     add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
