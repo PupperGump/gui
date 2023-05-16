@@ -1,15 +1,24 @@
-cmake_minimum_required(VERSION 3.1)
+cmake_minimum_required(VERSION 3.21)
 
 # Set the project name
 project(gui2 LANGUAGES CXX)
 target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_17)
 
-add_subdirectory(gui)
+include(FetchContent)
+FetchContent_Declare(SFML
+    GIT_REPOSITORY https://github.com/PupperGump/SFML.git
+    GIT_TAG puppergump_master)
+FetchContent_MakeAvailable(SFML)
 
-add_executable(gui2 main.cpp include/gui.hpp src/gui.cpp)
+add_executable(${PROJECT_NAME} main.cpp include/gui.cpp src/gui.hpp ${SFML_SOURCES})
 
-target_include_directories(gui2 PRIVATE include SFML/include)
+target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_SOURCE_DIR}SFML/include)
 
-target_link_libraries(gui2 PRIVATE sfml_lib)
+target_link_libraries(${PROJECT_NAME} PRIVATE sfml-graphics sfml-window)
+
+if (WIN32 AND BUILD_SHARED_LIBS)
+    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_RUNTIME_DLLS:${PROJECT_NAME}> $<TARGET_FILE_DIR:${PROJECT_NAME}> COMMAND_EXPAND_LISTS)
+endif()
 
 install(TARGETS ${PROJECT_NAME})
