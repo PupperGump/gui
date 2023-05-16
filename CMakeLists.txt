@@ -12,9 +12,9 @@ FetchContent_MakeAvailable(SFML)
 
 add_executable(${PROJECT_NAME} main.cpp include/gui.cpp src/gui.hpp ${SFML_SOURCES})
 
-target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_SOURCE_DIR}SFML/include)
+target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_SOURCE_DIR}SFML/include)
 
-target_link_libraries(${PROJECT_NAME} PRIVATE sfml-graphics sfml-window)
+target_link_libraries(${PROJECT_NAME} PUBLIC sfml-graphics sfml-window)
 
 if (WIN32 AND BUILD_SHARED_LIBS)
     add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
