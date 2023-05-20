@@ -13,9 +13,9 @@ add_executable(${PROJECT_NAME} ${CMAKE_SOURCE_DIR}/main.cpp ${CMAKE_SOURCE_DIR}/
 
 target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_17)
 
-#target_include_directories(${PROJECT_NAME})
+target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
-target_link_libraries(${PROJECT_NAME} PUBLIC sfml-graphics sfml-window)
+target_link_libraries(${PROJECT_NAME} PRIVATE sfml-graphics sfml-window)
 
 if (WIN32 AND BUILD_SHARED_LIBS)
     add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
